@@ -50,27 +50,21 @@ with open(VIDEO_FILE, "wb") as f:
     f.write(video_data.content)
 print(f"Saved nature video: {VIDEO_FILE}")
 
-# --- 3. FETCH NATURE AUDIO (PIXABAY API) ---
-print("--- 2. SEARCHING PIXABAY FOR NATURE SOUNDS ---")
-AUDIO_QUERIES = ["water stream", "rain", "forest birds", "ocean waves"]
-chosen_audio_query = random.choice(AUDIO_QUERIES)
+# --- 3. DOWNLOAD AMBIENT NATURE SOUNDS (GOOGLE LIBRARY) ---
+print("--- 2. FETCHING HIGH-QUALITY NATURE SOUNDS ---")
+NATURE_SOUND_URLS = [
+    "https://actions.google.com/sounds/v1/ambiences/outdoor_river_stream.ogg",
+    "https://actions.google.com/sounds/v1/weather/rain_heavy_loud.ogg",
+    "https://actions.google.com/sounds/v1/water/ocean_waves.ogg",
+    "https://actions.google.com/sounds/v1/ambiences/forest_birds.ogg"
+]
 
-pixabay_audio_url = f"https://pixabay.com/api/audio/?key={pixabay_key}&q={chosen_audio_query}&per_page=10"
-audio_response = requests.get(pixabay_audio_url).json()
-audio_hits = audio_response.get("hits", [])
+selected_sound_url = random.choice(NATURE_SOUND_URLS)
+AUDIO_FILE = "nature_sound.ogg"
 
-if not audio_hits:
-    # Fallback search if specific query fails
-    pixabay_audio_url = f"https://pixabay.com/api/audio/?key={pixabay_key}&q=nature&per_page=5"
-    audio_response = requests.get(pixabay_audio_url).json()
-    audio_hits = audio_response.get("hits", [])
+print("Downloading nature sound track...")
+audio_data = requests.get(selected_sound_url)
 
-chosen_track = random.choice(audio_hits)
-audio_download_url = chosen_track["download"]
-
-AUDIO_FILE = "nature_sound.mp3"
-print(f"Downloading audio track: {chosen_track.get('title', 'Nature Sound')}...")
-audio_data = requests.get(audio_download_url)
 with open(AUDIO_FILE, "wb") as f:
     f.write(audio_data.content)
 print("Nature sound downloaded successfully!")
