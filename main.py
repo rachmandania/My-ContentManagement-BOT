@@ -82,7 +82,7 @@ else:
 # --- 4. RENDER FINAL VIDEOS (MOVIEPY) ---
 print("--- 3. RENDERING DUAL FORMAT VIDEOS ---")
 background_clip = VideoFileClip(VIDEO_FILE)
-audio_clip = AudioFileClip(AUDIO_FILE)
+audio_clip = AudioFileClip("nature_sound.mp3")
 
 # Helper function to match clips to exact durations
 def prepare_clips(vid_clip, aud_clip, target_duration):
