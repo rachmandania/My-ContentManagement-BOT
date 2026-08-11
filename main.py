@@ -70,7 +70,7 @@ video_clip = video_clip.with_audio(audio_clip)
 FINAL_OUTPUT = "final_short.mp4"
 video_clip.write_videofile(
     FINAL_OUTPUT, 
-    fps=60, 
+    fps=24, 
     codec="libx264", 
     audio_codec="aac"
 )
