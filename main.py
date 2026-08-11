@@ -3,7 +3,7 @@ import os
 import requests
 import edge_tts
 from google import genai
-from moviepy.editor import AudioFileClip, ImageClip
+from moviepy import AudioFileClip, ImageClip
 
 # --- 1. SETTINGS & KEYS ---
 api_key = os.environ.get("GEMINI_API_KEY")
