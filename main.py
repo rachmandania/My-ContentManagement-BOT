@@ -54,18 +54,18 @@ print(f"Saved {IMAGE_FILE}!")
 # --- 5. RENDER FINAL VIDEO (MOVIEPY) ---
 print("--- 4. RENDERING FINAL VIDEO ---")
 # Find out exactly how long the voiceover audio is
+audio_clip = AudioFileClip(AUDIO_FILE)
+duration = audio_clip.duration
+
+# Match the image duration to the audio duration and combine them using the new MoviePy 2.0 format
 video_clip = ImageClip(IMAGE_FILE, duration=duration)
 video_clip = video_clip.with_audio(audio_clip)
-
-# Match the image duration to the audio duration and combine them
-video_clip = ImageClip(IMAGE_FILE).set_duration(duration)
-video_clip = video_clip.set_audio(audio_clip)
 
 # Export the final MP4 file
 FINAL_OUTPUT = "final_short.mp4"
 video_clip.write_videofile(
     FINAL_OUTPUT, 
-    fps=24, 
+    fps=30, 
     codec="libx264", 
     audio_codec="aac"
 )
