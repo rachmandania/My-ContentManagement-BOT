@@ -31,5 +31,7 @@ jobs:
       - name: Save Final Video
         uses: actions/upload-artifact@v4
         with:
-          name: Generated-Short
-          path: final_short.mp4
+          name: Generated-Videos
+          path: |
+            horizontal_short.mp4
+            vertical_short.mp4
