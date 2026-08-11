@@ -62,23 +62,23 @@ with open(VIDEO_FILE, "wb") as f:
 print(f"Saved nature video: {VIDEO_FILE}")
 
 # --- 4. DOWNLOAD AMBIENT NATURE SOUNDS ---
-# High-quality, reliable royalty-free nature audio tracks (Google Sound Library)
-NATURE_SOUND_URLS = [
-    "https://actions.google.com/sounds/v1/ambiences/outdoor_river_stream.ogg",
-    "https://actions.google.com/sounds/v1/weather/rain_heavy_loud.ogg",
-    "https://actions.google.com/sounds/v1/water/ocean_waves.ogg",
-    "https://actions.google.com/sounds/v1/ambiences/forest_birds.ogg"
-]
+AUDIO_FILE = "nature_sound.mp3"
 
-selected_sound_url = random.choice(NATURE_SOUND_URLS)
-AUDIO_FILE = "nature_sound.ogg"
+# Using a highly reliable public MP3 stream that never blocks bots
+sound_url = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
 
-print("Downloading nature sound track...")
-audio_data = requests.get(selected_sound_url)
+print("Downloading sound track...")
+headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+audio_data = requests.get(sound_url, headers=headers, allow_redirects=True)
 
-with open(AUDIO_FILE, "wb") as f:
-    f.write(audio_data.content)
-print("Nature sound downloaded successfully!")
+# Safety check: ensure we actually downloaded a real file, not an error page!
+if audio_data.status_code == 200:
+    with open(AUDIO_FILE, "wb") as f:
+        f.write(audio_data.content)
+    print("Sound downloaded successfully!")
+else:
+    print(f"CRITICAL ERROR: Failed to download audio. Status {audio_data.status_code}")
+    exit(1)
 
 # --- 5. RENDER FINAL VIDEO (MOVIEPY) ---
 print("--- RENDERING FINAL RELAXATION SHORT ---")
