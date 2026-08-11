@@ -51,7 +51,7 @@ search_response = requests.get(pexel_url, headers=headers).json()
 # Grab the direct download link for the HD vertical video file
 video_files = search_response["videos"][0]["video_files"]
 # Filter for a good mobile resolution download link
-vertical_video_url = next(v["link"] for v in video_files if v["width"] <= 1080 and v["height"] >= 1280)
+vertical_video_url = next((v["link"] for v in video_files if v["width"] <= 1080 and v["height"] >= 1280), video_files[0]["link"])
 
 VIDEO_FILE = "background.mp4"
 video_data = requests.get(vertical_video_url)
