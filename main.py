@@ -51,23 +51,28 @@ with open(IMAGE_FILE, "wb") as file:
     file.write(image_request.content)
 print(f"Saved {IMAGE_FILE}!")
 
-# --- 5. RENDER FINAL VIDEO (MOVIEPY) ---
+# --- 5. RENDER FINAL VIDEO WITH ZOOM EFFECT (MOVIEPY) ---
 print("--- 4. RENDERING FINAL VIDEO ---")
-# Find out exactly how long the voiceover audio is
+
 audio_clip = AudioFileClip(AUDIO_FILE)
 duration = audio_clip.duration
 
-# Match the image duration to the audio duration and combine them using the new MoviePy 2.0 format
+# Create the image clip and apply a smooth resize zoom function
 video_clip = ImageClip(IMAGE_FILE, duration=duration)
+
+# Dynamic zoom: scales the clip dimensions slightly larger over time t
+video_clip = video_clip.resized(lambda t: 1.0 + 0.15 * (t / duration))
+
+# Attach the voiceover audio
 video_clip = video_clip.with_audio(audio_clip)
 
 # Export the final MP4 file
 FINAL_OUTPUT = "final_short.mp4"
 video_clip.write_videofile(
     FINAL_OUTPUT, 
-    fps=30, 
+    fps=60, 
     codec="libx264", 
     audio_codec="aac"
 )
 
-print(f"SUCCESS! Your video is ready: {FINAL_OUTPUT}")
+print(f"SUCCESS! Your dynamic video is ready: {FINAL_OUTPUT}")
