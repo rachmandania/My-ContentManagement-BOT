@@ -62,22 +62,19 @@ with open(VIDEO_FILE, "wb") as f:
 print(f"Saved nature video: {VIDEO_FILE}")
 
 # --- 4. DOWNLOAD AMBIENT NATURE SOUNDS ---
-# Royalty-free ambient nature audio tracks
+# High-quality, reliable royalty-free nature audio tracks (Google Sound Library)
 NATURE_SOUND_URLS = [
-    "https://upload.wikimedia.org/wikipedia/commons/2/21/Forest_birds_and_stream.ogg",
-    "https://upload.wikimedia.org/wikipedia/commons/0/05/Ocean_waves_sound.ogg",
-    "https://upload.wikimedia.org/wikipedia/commons/b/b5/Gentle_rain_loop.ogg"
+    "https://actions.google.com/sounds/v1/ambiences/outdoor_river_stream.ogg",
+    "https://actions.google.com/sounds/v1/weather/rain_heavy_loud.ogg",
+    "https://actions.google.com/sounds/v1/water/ocean_waves.ogg",
+    "https://actions.google.com/sounds/v1/ambiences/forest_birds.ogg"
 ]
 
 selected_sound_url = random.choice(NATURE_SOUND_URLS)
 AUDIO_FILE = "nature_sound.ogg"
 
 print("Downloading nature sound track...")
-# Apply a custom browser User-Agent so Wikimedia does not block our download
-audio_headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-}
-audio_data = requests.get(selected_sound_url, headers=audio_headers)
+audio_data = requests.get(selected_sound_url)
 
 with open(AUDIO_FILE, "wb") as f:
     f.write(audio_data.content)
