@@ -51,29 +51,33 @@ with open(VIDEO_FILE, "wb") as f:
     f.write(video_data.content)
 print(f"Saved nature video: {VIDEO_FILE}")
 
-# --- 3. DOWNLOAD AMBIENT NATURE SOUNDS (GOOGLE LIBRARY) ---
+# --- 3. DOWNLOAD AMBIENT NATURE SOUNDS (INTERNET ARCHIVE) ---
 print("--- 2. FETCHING HIGH-QUALITY NATURE SOUNDS ---")
+
+# Reliable public domain nature sounds that do NOT block GitHub servers
 NATURE_SOUND_URLS = [
-    "https://actions.google.com/sounds/v1/ambiences/outdoor_river_stream.ogg",
-    "https://actions.google.com/sounds/v1/weather/rain_heavy_loud.ogg",
-    "https://actions.google.com/sounds/v1/water/ocean_waves.ogg",
-    "https://actions.google.com/sounds/v1/ambiences/forest_birds.ogg"
+    "https://archive.org/download/NatureSounds_201709/01%20Rain%20%26%20Thunder.mp3",
+    "https://archive.org/download/NatureSounds_201709/02%20Stream%20Water.mp3",
+    "https://archive.org/download/NatureSounds_201709/03%20Forest%20Birds.mp3"
 ]
 
 selected_sound_url = random.choice(NATURE_SOUND_URLS)
-AUDIO_FILE = "nature_sound.ogg"
+AUDIO_FILE = "nature_sound.mp3"
 
 print("Downloading nature sound track...")
-
-# Apply a custom browser User-Agent so Google never blocks the download
 audio_headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
 }
 audio_data = requests.get(selected_sound_url, headers=audio_headers, allow_redirects=True)
 
-with open(AUDIO_FILE, "wb") as f:
-    f.write(audio_data.content)
-print("Nature sound downloaded successfully!")
+# Safety check: ensure we actually downloaded a real audio file (not a blank error page)
+if audio_data.status_code == 200 and len(audio_data.content) > 1000:
+    with open(AUDIO_FILE, "wb") as f:
+        f.write(audio_data.content)
+    print("Nature sound downloaded successfully!")
+else:
+    print(f"CRITICAL ERROR: Failed to download audio. Status {audio_data.status_code}")
+    exit(1)
 
 # --- 4. RENDER FINAL VIDEOS (MOVIEPY) ---
 print("--- 3. RENDERING DUAL FORMAT VIDEOS ---")
