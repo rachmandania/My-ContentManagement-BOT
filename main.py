@@ -4,52 +4,48 @@ import requests
 from moviepy import VideoFileClip, AudioFileClip, concatenate_videoclips, concatenate_audioclips
 
 # --- 1. SETTINGS & KEYS ---
-pexels_key = os.environ.get("PEXELS_API_KEY")
 pixabay_key = os.environ.get("PIXABAY_API_KEY")
 
-if not pexels_key or not pixabay_key:
-    print("Error: Missing API keys (PEXELS_API_KEY or PIXABAY_API_KEY)!-")
+if not pixabay_key:
+    print("Error: Missing PIXABAY_API_KEY environment variable!")
     exit(1)
 
 TARGET_DURATION = 30  # Duration of the relaxation Short in seconds
 
-# --- 2. RANDOM NATURE VIDEO SEARCH (PEXELS) ---
+# --- 2. FETCH RANDOM NATURE VIDEO (PIXABAY API) ---
 NATURE_TOPICS = [
-    "calm forest stream landscape",
-    "ocean waves shore landscape",
-    "waterfall mist landscape",
-    "mountain river nature",
-    "rain on green leaves vertical",
-    "peaceful lake water landscape",
-    "bamboo forest wind vertical",
-    "coastal beach waves landscape"
+    "forest stream",
+    "ocean waves",
+    "waterfall mist",
+    "mountain river",
+    "rain leaves",
+    "peaceful lake"
 ]
 
 selected_topic = random.choice(NATURE_TOPICS)
-print(f"--- 1. SELECTED THEME: '{selected_topic}' ---")
+print(f"--- 1. SEARCHING PIXABAY VIDEO FOR THEME: '{selected_topic}' ---")
 
-headers = {"Authorization": pexels_key}
-random_page = random.randint(1, 5)
-pexel_url = f"https://api.pexels.com/videos/search?query={selected_topic}&orientation=portrait&per_page=15&page={random_page}"
+pixabay_video_url = f"https://pixabay.com/api/videos/?key={pixabay_key}&q={selected_topic}&per_page=15"
+video_response = requests.get(pixabay_video_url).json()
+video_hits = video_response.get("hits", [])
 
-search_response = requests.get(pexel_url, headers=headers).json()
-videos = search_response.get("videos", [])
+if not video_hits:
+    # Fallback search if specific topic yields no results
+    pixabay_video_url = f"https://pixabay.com/api/videos/?key={pixabay_key}&q=nature&per_page=10"
+    video_response = requests.get(pixabay_video_url).json()
+    video_hits = video_response.get("hits", [])
 
-if not videos:
-    pexel_url = "https://api.pexels.com/videos/search?query=nature+landscape&orientation=portrait&per_page=10"
-    search_response = requests.get(pexel_url, headers=headers).json()
-    videos = search_response.get("videos", [])
-
-chosen_video = random.choice(videos)
-video_files = chosen_video["video_files"]
-vertical_video_url = next(
-    (v["link"] for v in video_files if v["width"] <= 1080 and v["height"] >= 1280),
-    video_files[0]["link"]
+chosen_video = random.choice(video_hits)
+video_variants = chosen_video.get("videos", {})
+download_video_url = (
+    video_variants.get("large", {}).get("url") or 
+    video_variants.get("medium", {}).get("url") or 
+    video_variants.get("small", {}).get("url")
 )
 
 VIDEO_FILE = "background.mp4"
-print("Downloading nature video from Pexels...")
-video_data = requests.get(vertical_video_url)
+print("Downloading nature video from Pixabay...")
+video_data = requests.get(download_video_url)
 with open(VIDEO_FILE, "wb") as f:
     f.write(video_data.content)
 print(f"Saved nature video: {VIDEO_FILE}")
@@ -84,7 +80,7 @@ print("--- 3. RENDERING FINAL RELAXATION SHORT ---")
 background_clip = VideoFileClip(VIDEO_FILE)
 audio_clip = AudioFileClip(AUDIO_FILE)
 
-# Loop or trim video to match TARGET_DURATION
+# Loop or trim video clip to match TARGET_DURATION
 if background_clip.duration < TARGET_DURATION:
     loops_needed = int(TARGET_DURATION // background_clip.duration) + 1
     video_clip = concatenate_videoclips([background_clip] * loops_needed)
@@ -100,9 +96,10 @@ if audio_clip.duration < TARGET_DURATION:
 
 audio_clip = audio_clip.subclipped(0, TARGET_DURATION)
 
-# Attach sound to video
+# Attach ambient nature audio to video
 final_clip = video_clip.with_audio(audio_clip)
 
+# Render output MP4
 FINAL_OUTPUT = "final_short.mp4"
 final_clip.write_videofile(
     FINAL_OUTPUT,
