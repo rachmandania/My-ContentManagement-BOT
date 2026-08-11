@@ -3,13 +3,14 @@ import os
 import requests
 import edge_tts
 from google import genai
-from moviepy import AudioFileClip, ImageClip
+from moviepy import AudioFileClip, VideoFileClip
 
 # --- 1. SETTINGS & KEYS ---
 api_key = os.environ.get("GEMINI_API_KEY")
+pexels_key = os.environ.get("PEXELS_API_KEY")
 
-if not api_key:
-    print("Error: GEMINI_API_KEY is missing!")
+if not api_key or not pexels_key:
+    print("Error: Missing API keys!")
     exit(1)
 
 # --- 2. GENERATE SCRIPT (GEMINI) ---
@@ -40,30 +41,39 @@ async def create_voiceover():
 asyncio.run(create_voiceover())
 print(f"Saved {AUDIO_FILE}!")
 
-# --- 4. DOWNLOAD BACKGROUND IMAGE ---
-print("--- 3. DOWNLOADING BACKGROUND VISUAL ---")
-# Fetches a free, vertical space image pre-cropped to 1080x1920
-IMAGE_URL = "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=1080&h=1920&fit=crop"
-IMAGE_FILE = "background.jpg"
+# --- 4. DOWNLOAD MOVING STOCK VIDEO (PEXELS) ---
+print("--- 3. DOWNLOADING MOVING VIDEO BACKGROUND ---")
+headers = {"Authorization": pexels_key}
+# Search for vertical space video loops on Pexels
+pexel_url = "https://api.pexels.com/videos/search?query=space+nebula+vertical&per_page=1"
+search_response = requests.get(pexel_url, headers=headers).json()
 
-image_request = requests.get(IMAGE_URL)
-with open(IMAGE_FILE, "wb") as file:
-    file.write(image_request.content)
-print(f"Saved {IMAGE_FILE}!")
+# Grab the direct download link for the HD vertical video file
+video_files = search_response["videos"][0]["video_files"]
+# Filter for a good mobile resolution download link
+vertical_video_url = next(v["link"] for v in video_files if v["width"] <= 1080 and v["height"] >= 1280)
 
-# --- 5. RENDER FINAL VIDEO WITH ZOOM EFFECT (MOVIEPY) ---
+VIDEO_FILE = "background.mp4"
+video_data = requests.get(vertical_video_url)
+with open(VIDEO_FILE, "wb") as f:
+    f.write(video_data.content)
+print(f"Saved moving video {VIDEO_FILE}!")
+
+# --- 5. RENDER FINAL VIDEO (MOVIEPY) ---
 print("--- 4. RENDERING FINAL VIDEO ---")
-
 audio_clip = AudioFileClip(AUDIO_FILE)
 duration = audio_clip.duration
 
-# Create the image clip and apply a smooth resize zoom function
-video_clip = ImageClip(IMAGE_FILE, duration=duration)
+# Load the background video clip
+background_clip = VideoFileClip(VIDEO_FILE)
 
-# Dynamic zoom: scales the clip dimensions slightly larger over time t
-video_clip = video_clip.resized(lambda t: 1.0 + 0.15 * (t / duration))
+# If the stock video is shorter than the audio, loop it. If longer, trim it.
+if background_clip.duration < duration:
+    from moviepy import concatenate_videoclips
+    loops_needed = int(duration // background_clip.duration) + 1
+    background_clip = concatenate_videoclips([background_clip] * loops_needed)
 
-# Attach the voiceover audio
+video_clip = background_clip.subclipped(0, duration)
 video_clip = video_clip.with_audio(audio_clip)
 
 # Export the final MP4 file
