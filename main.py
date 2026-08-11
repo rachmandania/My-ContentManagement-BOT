@@ -1,18 +1,20 @@
 import asyncio
 import os
+import requests
 import edge_tts
 from google import genai
+from moviepy.editor import AudioFileClip, ImageClip
 
-# 1. Fetch API Key
+# --- 1. SETTINGS & KEYS ---
 api_key = os.environ.get("GEMINI_API_KEY")
 
 if not api_key:
     print("Error: GEMINI_API_KEY is missing!")
     exit(1)
 
+# --- 2. GENERATE SCRIPT (GEMINI) ---
+print("--- 1. GENERATING SCRIPT ---")
 client = genai.Client(api_key=api_key)
-
-# 2. Ask Gemini for clean spoken text ONLY
 prompt = (
     "Write a catchy 30-second YouTube Short script about an interesting space fact. "
     "CRITICAL RULE: Return ONLY the exact spoken narration words. Do NOT include stage "
@@ -23,44 +25,49 @@ response = client.models.generate_content(
     model="gemini-2.5-flash",
     contents=prompt,
 )
-
 script_text = response.text
-print("--- GENERATED SCRIPT ---")
 print(script_text)
 
-# 3. Convert script text to audio file (.mp3)
-VOICE = "en-US-ChristopherNeural"  # Clear, natural English voice
-OUTPUT_FILE = "voiceover.mp3"
-
+# --- 3. GENERATE VOICEOVER (EDGE-TTS) ---
+print("--- 2. GENERATING VOICEOVER ---")
+VOICE = "en-US-ChristopherNeural"
+AUDIO_FILE = "voiceover.mp3"
 
 async def create_voiceover():
-    print("--- GENERATING VOICEOVER AUDIO ---")
     communicate = edge_tts.Communicate(script_text, VOICE)
-    await communicate.save(OUTPUT_FILE)
-    print(f"Successfully saved voiceover to {OUTPUT_FILE}!")
+    await communicate.save(AUDIO_FILE)
 
+asyncio.run(create_voiceover())
+print(f"Saved {AUDIO_FILE}!")
 
-# Run the audio generation
-asyncio.run(create_voiceover())import os
-from google import genai
+# --- 4. DOWNLOAD BACKGROUND IMAGE ---
+print("--- 3. DOWNLOADING BACKGROUND VISUAL ---")
+# Fetches a free, vertical space image pre-cropped to 1080x1920
+IMAGE_URL = "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=1080&h=1920&fit=crop"
+IMAGE_FILE = "background.jpg"
 
-# Fetch the API key safely from environment variables
-api_key = os.environ.get("GEMINI_API_KEY")
+image_request = requests.get(IMAGE_URL)
+with open(IMAGE_FILE, "wb") as file:
+    file.write(image_request.content)
+print(f"Saved {IMAGE_FILE}!")
 
-if not api_key:
-    print("Error: GEMINI_API_KEY is missing!")
-    exit(1)
+# --- 5. RENDER FINAL VIDEO (MOVIEPY) ---
+print("--- 4. RENDERING FINAL VIDEO ---")
+# Find out exactly how long the voiceover audio is
+audio_clip = AudioFileClip(AUDIO_FILE)
+duration = audio_clip.duration
 
-# Initialize the Gemini client
-client = genai.Client(api_key=api_key)
+# Match the image duration to the audio duration and combine them
+video_clip = ImageClip(IMAGE_FILE).set_duration(duration)
+video_clip = video_clip.set_audio(audio_clip)
 
-# Generate a YouTube Short script
-prompt = "Write a catchy 30-second YouTube Short script about an interesting space fact. Include a hook at the beginning."
-
-response = client.models.generate_content(
-    model="gemini-2.5-flash",
-    contents=prompt,
+# Export the final MP4 file
+FINAL_OUTPUT = "final_short.mp4"
+video_clip.write_videofile(
+    FINAL_OUTPUT, 
+    fps=24, 
+    codec="libx264", 
+    audio_codec="aac"
 )
 
-print("--- GENERATED SCRIPT ---")
-print(response.text)
+print(f"SUCCESS! Your video is ready: {FINAL_OUTPUT}")
