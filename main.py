@@ -1,88 +1,114 @@
-import asyncio
 import os
+import random
 import requests
-import edge_tts
-from google import genai
-from moviepy import AudioFileClip, VideoFileClip
+from moviepy import VideoFileClip, AudioFileClip, concatenate_videoclips, concatenate_audioclips
 
 # --- 1. SETTINGS & KEYS ---
-api_key = os.environ.get("GEMINI_API_KEY")
 pexels_key = os.environ.get("PEXELS_API_KEY")
 
-if not api_key or not pexels_key:
-    print("Error: Missing API keys!")
+if not pexels_key:
+    print("Error: Missing PEXELS_API_KEY!")
     exit(1)
 
-# --- 2. GENERATE SCRIPT (GEMINI) ---
-print("--- 1. GENERATING SCRIPT ---")
-client = genai.Client(api_key=api_key)
-prompt = (
-    "Write a catchy 30-second YouTube Short script about an interesting space fact. "
-    "CRITICAL RULE: Return ONLY the exact spoken narration words. Do NOT include stage "
-    "directions, brackets, scene descriptions, or labels like 'Voiceover:'."
-)
+# Desired duration of the relaxation Short in seconds
+TARGET_DURATION = 30 
 
-response = client.models.generate_content(
-    model="gemini-3.6-flash",
-    contents=prompt,
-)
-script_text = response.text
-print(script_text)
+# --- 2. RANDOM NATURE SEARCH (NO PEOPLE / LANDSCAPES ONLY) ---
+NATURE_TOPICS = [
+    "calm forest stream landscape",
+    "ocean waves shore landscape",
+    "waterfall mist landscape",
+    "mountain river nature",
+    "rain on green leaves vertical",
+    "peaceful lake water landscape",
+    "bamboo forest wind vertical",
+    "coastal beach waves landscape"
+]
 
-# --- 3. GENERATE VOICEOVER (EDGE-TTS) ---
-print("--- 2. GENERATING VOICEOVER ---")
-VOICE = "en-US-ChristopherNeural"
-AUDIO_FILE = "voiceover.mp3"
+selected_topic = random.choice(NATURE_TOPICS)
+print(f"--- 1. SELECTED THEME: '{selected_topic}' ---")
 
-async def create_voiceover():
-    communicate = edge_tts.Communicate(script_text, VOICE)
-    await communicate.save(AUDIO_FILE)
-
-asyncio.run(create_voiceover())
-print(f"Saved {AUDIO_FILE}!")
-
-# --- 4. DOWNLOAD MOVING STOCK VIDEO (PEXELS) ---
-print("--- 3. DOWNLOADING MOVING VIDEO BACKGROUND ---")
+# --- 3. FETCH RANDOM NATURE VIDEO (PEXELS API) ---
 headers = {"Authorization": pexels_key}
-# Search for vertical space video loops on Pexels
-pexel_url = "https://api.pexels.com/videos/search?query=space+nebula+vertical&per_page=1"
-search_response = requests.get(pexel_url, headers=headers).json()
 
-# Grab the direct download link for the HD vertical video file
-video_files = search_response["videos"][0]["video_files"]
-# Filter for a good mobile resolution download link
-vertical_video_url = next((v["link"] for v in video_files if v["width"] <= 1080 and v["height"] >= 1280), video_files[0]["link"])
+# Pick a random page (1–5) to guarantee a different video every run
+random_page = random.randint(1, 5)
+pexel_url = f"https://api.pexels.com/videos/search?query={selected_topic}&orientation=portrait&per_page=15&page={random_page}"
+
+search_response = requests.get(pexel_url, headers=headers).json()
+videos = search_response.get("videos", [])
+
+# Fallback search if page/query yields empty results
+if not videos:
+    pexel_url = "https://api.pexels.com/videos/search?query=nature+landscape&orientation=portrait&per_page=10"
+    search_response = requests.get(pexel_url, headers=headers).json()
+    videos = search_response.get("videos", [])
+
+# Pick a random video from the list
+chosen_video = random.choice(videos)
+video_files = chosen_video["video_files"]
+
+# Get optimal vertical HD link or fallback to first option
+vertical_video_url = next(
+    (v["link"] for v in video_files if v["width"] <= 1080 and v["height"] >= 1280),
+    video_files[0]["link"]
+)
 
 VIDEO_FILE = "background.mp4"
+print("Downloading nature video...")
 video_data = requests.get(vertical_video_url)
 with open(VIDEO_FILE, "wb") as f:
     f.write(video_data.content)
-print(f"Saved moving video {VIDEO_FILE}!")
+print(f"Saved nature video: {VIDEO_FILE}")
+
+# --- 4. DOWNLOAD AMBIENT NATURE SOUNDS ---
+# Royalty-free ambient nature audio tracks
+NATURE_SOUND_URLS = [
+    "https://upload.wikimedia.org/wikipedia/commons/2/21/Forest_birds_and_stream.ogg",
+    "https://upload.wikimedia.org/wikipedia/commons/0/05/Ocean_waves_sound.ogg",
+    "https://upload.wikimedia.org/wikipedia/commons/b/b5/Gentle_rain_loop.ogg"
+]
+
+selected_sound_url = random.choice(NATURE_SOUND_URLS)
+AUDIO_FILE = "nature_sound.ogg"
+
+print("Downloading nature sound track...")
+audio_data = requests.get(selected_sound_url)
+with open(AUDIO_FILE, "wb") as f:
+    f.write(audio_data.content)
+print("Nature sound downloaded successfully!")
 
 # --- 5. RENDER FINAL VIDEO (MOVIEPY) ---
-print("--- 4. RENDERING FINAL VIDEO ---")
-audio_clip = AudioFileClip(AUDIO_FILE)
-duration = audio_clip.duration
-
-# Load the background video clip
+print("--- RENDERING FINAL RELAXATION SHORT ---")
 background_clip = VideoFileClip(VIDEO_FILE)
+audio_clip = AudioFileClip(AUDIO_FILE)
 
-# If the stock video is shorter than the audio, loop it. If longer, trim it.
-if background_clip.duration < duration:
-    from moviepy import concatenate_videoclips
-    loops_needed = int(duration // background_clip.duration) + 1
-    background_clip = concatenate_videoclips([background_clip] * loops_needed)
+# Loop or trim video clip to match TARGET_DURATION
+if background_clip.duration < TARGET_DURATION:
+    loops_needed = int(TARGET_DURATION // background_clip.duration) + 1
+    video_clip = concatenate_videoclips([background_clip] * loops_needed)
+else:
+    video_clip = background_clip
 
-video_clip = background_clip.subclipped(0, duration)
-video_clip = video_clip.with_audio(audio_clip)
+video_clip = video_clip.subclipped(0, TARGET_DURATION)
 
-# Export the final MP4 file
+# Loop or trim audio to match TARGET_DURATION
+if audio_clip.duration < TARGET_DURATION:
+    audio_loops = int(TARGET_DURATION // audio_clip.duration) + 1
+    audio_clip = concatenate_audioclips([audio_clip] * audio_loops)
+
+audio_clip = audio_clip.subclipped(0, TARGET_DURATION)
+
+# Attach ambient nature audio to video
+final_clip = video_clip.with_audio(audio_clip)
+
+# Render output MP4
 FINAL_OUTPUT = "final_short.mp4"
-video_clip.write_videofile(
-    FINAL_OUTPUT, 
-    fps=24, 
-    codec="libx264", 
+final_clip.write_videofile(
+    FINAL_OUTPUT,
+    fps=24,
+    codec="libx264",
     audio_codec="aac"
 )
 
-print(f"SUCCESS! Your dynamic video is ready: {FINAL_OUTPUT}")
+print(f"SUCCESS! Relaxing nature video ready: {FINAL_OUTPUT}")
