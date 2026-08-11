@@ -73,7 +73,12 @@ selected_sound_url = random.choice(NATURE_SOUND_URLS)
 AUDIO_FILE = "nature_sound.ogg"
 
 print("Downloading nature sound track...")
-audio_data = requests.get(selected_sound_url)
+# Apply a custom browser User-Agent so Wikimedia does not block our download
+audio_headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+}
+audio_data = requests.get(selected_sound_url, headers=audio_headers)
+
 with open(AUDIO_FILE, "wb") as f:
     f.write(audio_data.content)
 print("Nature sound downloaded successfully!")
