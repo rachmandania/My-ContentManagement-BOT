@@ -3,6 +3,8 @@ import time
 import random
 import requests
 from moviepy import VideoFileClip, AudioFileClip, concatenate_videoclips, concatenate_audioclips
+# Import the fading effects
+from moviepy.video.fx.all import fadein, fadeout
 
 # --- 1. SETTINGS & KEYS ---
 pixabay_key = os.environ.get("PIXABAY_API_KEY")
@@ -11,9 +13,9 @@ if not pixabay_key:
     print("Error: Missing PIXABAY_API_KEY environment variable!")
     exit(1)
 
-# Updated Durations: 10 minutes (600s) for Horizontal, 15s for Vertical
-HORIZONTAL_DURATION = 600
-VERTICAL_DURATION = 15
+# Back to 30 seconds for debugging
+HORIZONTAL_DURATION = 30  
+VERTICAL_DURATION = 15     
 
 # --- 2. FETCH RANDOM NATURE VIDEO (PIXABAY API) ---
 NATURE_TOPICS = [
@@ -58,7 +60,6 @@ NATURE_SOUND_URLS = [
 ]
 
 AUDIO_FILE = "nature_sound.ogg"
-
 audio_headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
@@ -88,11 +89,12 @@ if not audio_downloaded:
 
 # --- 4. RENDER DUAL FORMAT VIDEOS FROM ONE SOURCE ---
 print("--- 3. RENDERING HORIZONTAL & CROPPED VERTICAL VIDEOS ---")
-base_video_clip = VideoFileClip(VIDEO_FILE)
+
+# ADDED FADES: This applies a 1-second fade in/out so the loops transition smoothly!
+base_video_clip = VideoFileClip(VIDEO_FILE).fx(fadein, 1).fx(fadeout, 1)
 audio_clip = AudioFileClip(AUDIO_FILE)
 
 def build_media(v_clip, a_clip, target_dur):
-    # This will automatically loop your video and audio until it hits 10 minutes!
     if v_clip.duration < target_dur:
         loops = int(target_dur // v_clip.duration) + 1
         v_out = concatenate_videoclips([v_clip] * loops)
@@ -109,7 +111,7 @@ def build_media(v_clip, a_clip, target_dur):
     
     return v_out.with_audio(a_out)
 
-print("Rendering horizontal_short.mp4 (10 Minutes)...")
+print("Rendering horizontal_short.mp4 (30 Seconds)...")
 horiz_final = build_media(base_video_clip, audio_clip, HORIZONTAL_DURATION)
 horiz_final.write_videofile("horizontal_short.mp4", fps=24, codec="libx264", audio_codec="aac")
 
@@ -118,7 +120,6 @@ w, h = base_video_clip.size
 target_width = int(h * 9 / 16)
 target_height = int(h)
 
-# Removed the width/height % 2 adjustment as requested!
 cropped_base = base_video_clip.cropped(width=target_width, height=target_height, x_center=w/2, y_center=h/2)
 vert_final = build_media(cropped_base, audio_clip, VERTICAL_DURATION)
 vert_final.write_videofile("vertical_short.mp4", fps=24, codec="libx264", audio_codec="aac")
