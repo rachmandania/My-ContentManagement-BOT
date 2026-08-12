@@ -1,5 +1,5 @@
+# if you want to fork this please give me some credits
 # My-youtube-BOT
-- **if you want to fork this please give me some credits**
 - Vertical & Horizontal Video Generator, Then auto upload it to the youtube.
 - With the help of agent it can run 24/7.
 - in the future another social media might be added, so it wont be youtube exclusive anymore.
