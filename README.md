@@ -5,4 +5,4 @@ Im building Youtube Video Generator, and auto upload it pure only with github
   - Auto upload the result
   - run it 24/7
   - grab the youtube information
-  - connect it to the my own Discord server
+  - connect it to the my own Discord Channel (Completed)
