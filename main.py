@@ -130,3 +130,30 @@ vert_final = build_media(cropped_base, audio_clip, VERTICAL_DURATION)
 vert_final.write_videofile("vertical_short.mp4", fps=24, codec="libx264", audio_codec="aac")
 
 print("SUCCESS! Both formats successfully generated from one video source!")
+
+# --- 5. SEND TO DISCORD ---
+discord_webhook = os.environ.get("DISCORD_WEBHOOK_URL")
+
+if discord_webhook:
+    print("--- 4. UPLOADING TO DISCORD ---")
+    
+    # We will upload both the horizontal and vertical versions
+    files_to_upload = ["horizontal_short.mp4", "vertical_short.mp4"]
+    
+    for vid_file in files_to_upload:
+        if os.path.exists(vid_file):
+            print(f"Sending {vid_file} to Discord...")
+            with open(vid_file, "rb") as f:
+                # Add your custom YouTube title to the Discord message
+                payload = {
+                    "content": f"✅ Your automated nature video is ready: **{vid_file}**\nTarget Title: *Rest up, enjoy the Nature*"
+                }
+                files = {"file": (vid_file, f, "video/mp4")}
+                
+                # Push the file to the Discord server
+                response = requests.post(discord_webhook, data=payload, files=files)
+                
+                if response.status_code in [200, 204]:
+                    print(f"Successfully sent {vid_file} to Discord!")
+                else:
+                    print(f"Discord upload failed for {vid_file}. Status: {response.status_code}")
