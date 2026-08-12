@@ -23,13 +23,31 @@ jobs:
       - name: Install Python Dependencies
         run: pip install -r requirements.txt
 
+      - name: Notify Discord (Start)
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python discord_notify.py start
+
       - name: Run Video Generator
         env:
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+        # This bash command runs your script and saves any crash data to 'error.log'
+        run: python main.py 2> >(tee error.log >&2)
+
+      - name: Notify Discord (Success)
+        if: success()  # GitHub only runs this if main.py finished perfectly
+        env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: python main.py
+        run: python discord_notify.py success
+
+      - name: Notify Discord (Error)
+        if: failure()  # GitHub only runs this if main.py crashed
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python discord_notify.py error
 
       - name: Save Final Video
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: Generated-Videos
