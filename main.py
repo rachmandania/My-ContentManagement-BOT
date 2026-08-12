@@ -98,7 +98,7 @@ for attempt in range(3):
 
 if not audio_downloaded:
     print("Google Library blocked the request. Switching to reliable backup audio server...")
-    backup_url = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+    backup_url = "https://actions.google.com/sounds/v1/ambiences/outdoor_river_stream.ogg"
     audio_data = requests.get(backup_url, headers=audio_headers, allow_redirects=True)
     with open(AUDIO_FILE, "wb") as f:
         f.write(audio_data.content)
