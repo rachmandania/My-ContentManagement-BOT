@@ -41,18 +41,6 @@ jobs:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: python discord_notify.py success
 
-     # - name: Run YouTube Upload
-      #  if: success()
-       # env:
-        #  YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
-        #run: python youtube_upload.py
-
-      - #name: Notify Discord (Uploaded)
-        #if: success()
-        #env:
-         # DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        #run: python discord_notify.py uploaded
-
       - name: Notify Discord (Error)
         if: failure()
         env:
