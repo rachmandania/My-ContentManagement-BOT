@@ -16,7 +16,6 @@ HORIZONTAL_DURATION = 30
 VERTICAL_DURATION = 15
 
 # --- 2. FETCH RANDOM NATURE VIDEO (PIXABAY API) ---
-# Smart mapping: Each video theme is now permanently linked to a matching NATURE sound!
 THEME_MAP = {
     "forest stream": "https://archive.org/download/NatureSounds_201709/02%20Stream%20Water.mp3",
     "mountain river": "https://archive.org/download/NatureSounds_201709/02%20Stream%20Water.mp3",
@@ -34,14 +33,12 @@ pixabay_video_url = f"https://pixabay.com/api/videos/?key={pixabay_key}&q={selec
 video_response = requests.get(pixabay_video_url).json()
 video_hits = video_response.get("hits", [])
 
-# STRICT FILTER: Only keep videos that are true Widescreen Horizontal (Width > Height)
 horizontal_hits = []
 for v in video_hits:
     med = v.get("videos", {}).get("medium", {})
     if med.get("width", 0) > med.get("height", 0):
         horizontal_hits.append(v)
 
-# Fallback just in case the first search fails
 if not horizontal_hits:
     pixabay_video_url = f"https://pixabay.com/api/videos/?key={pixabay_key}&q=nature&per_page=20"
     video_response = requests.get(pixabay_video_url).json()
@@ -51,7 +48,6 @@ if not horizontal_hits:
         if med.get("width", 0) > med.get("height", 0):
             horizontal_hits.append(v)
 
-# Extra safety net to prevent crashes
 if not horizontal_hits and video_hits:
     horizontal_hits.append(video_hits[0])
 
@@ -70,34 +66,39 @@ with open(VIDEO_FILE, "wb") as f:
     f.write(video_data.content)
 print(f"Saved nature video: {VIDEO_FILE}")
 
-# --- 3. DOWNLOAD AMBIENT NATURE SOUNDS (INTERNET ARCHIVE) ---
+# --- 3. DOWNLOAD AMBIENT NATURE SOUNDS (WITH SAFETY CHECKS) ---
 print("--- 2. FETCHING PERFECTLY MATCHING NATURE SOUNDS ---")
-AUDIO_FILE = "nature_sound.mp3" # Must be .mp3!
+AUDIO_FILE = "nature_sound.mp3"
 audio_headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
 audio_downloaded = False
 
-print("Downloading matching nature sound track...")
-for attempt in range(3):
-    audio_data = requests.get(selected_sound_url, headers=audio_headers, allow_redirects=True)
-    
-    # Ensure we actually get an audio file, not a 404 HTML page
-    if audio_data.status_code == 200 and len(audio_data.content) > 1000:
-        with open(AUDIO_FILE, "wb") as f:
-            f.write(audio_data.content)
-        print("Matching nature sound downloaded successfully!")
-        audio_downloaded = True
-        break
-    else:
-        print(f"Server overloaded or blocked (Status {audio_data.status_code}). Retrying in 2 seconds...")
-        time.sleep(2)
+# We will try up to 5 times to get a real audio file
+for attempt in range(5):
+    print(f"Attempt {attempt + 1}: Downloading audio track...")
+    try:
+        audio_data = requests.get(selected_sound_url, headers=audio_headers, allow_redirects=True, timeout=15)
+        # A real MP3 is several megabytes. If the content is tiny, it's an error webpage.
+        if audio_data.status_code == 200 and len(audio_data.content) > 50000:
+            with open(AUDIO_FILE, "wb") as f:
+                f.write(audio_data.content)
+            print("Matching nature sound downloaded successfully!")
+            audio_downloaded = True
+            break
+        else:
+            print(f"Server returned HTML or error (Status {audio_data.status_code}). Retrying in 5 seconds...")
+            time.sleep(5)
+    except Exception as e:
+        print(f"Connection dropped. Retrying in 5 seconds...")
+        time.sleep(5)
 
-# Bulletproof fallback to a highly reliable nature river stream (No techno!)
+# If all 5 attempts fail, use a guaranteed Wikipedia nature stream instead of a techno song
 if not audio_downloaded:
-    print("Switching to reliable backup nature stream...")
-    backup_url = "https://archive.org/download/NatureSounds_201709/02%20Stream%20Water.mp3"
-    audio_data = requests.get(backup_url, headers=audio_headers, allow_redirects=True)
+    print("Archive.org is heavily overloaded. Switching to emergency Wikipedia nature stream...")
+    AUDIO_FILE = "nature_sound.ogg" # Switch to OGG for Wikipedia
+    emergency_url = "https://upload.wikimedia.org/wikipedia/commons/2/21/Forest_birds_and_stream.ogg"
+    audio_data = requests.get(emergency_url, headers=audio_headers, allow_redirects=True)
     with open(AUDIO_FILE, "wb") as f:
         f.write(audio_data.content)
 
