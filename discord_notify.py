@@ -16,19 +16,20 @@ if command == "start":
     print("Start notification sent.")
 
 elif command == "success":
-    files_to_upload = ["horizontal_short.mp4", "vertical_short.mp4"]
-    for vid_file in files_to_upload:
-        if os.path.exists(vid_file):
-            print(f"Sending {vid_file} to Discord...")
-            with open(vid_file, "rb") as f:
-                payload = {"content": f"✅ The video successfully generated: **{vid_file}**"}
-                files = {"file": (vid_file, f, "video/mp4")}
-                response = requests.post(discord_webhook, data=payload, files=files)
-                
-                if response.status_code in [200, 204]:
-                    print(f"Successfully sent {vid_file} to Discord!")
-                else:
-                    print(f"Discord upload failed for {vid_file}. Status: {response.status_code}")
+    # Because HD videos exceed Discord's 25MB webhook limit, we send a text notification instead
+    success_message = (
+        "✅ **The video successfully generated!**\n\n"
+        "🎥 Both your Horizontal (30s) and Vertical (15s) HD nature videos are ready.\n"
+        "📥 **How to download:** Head to your GitHub Actions tab, click this latest run, and download the `Generated-Videos` file at the bottom of the page!"
+    )
+    
+    payload = {"content": success_message}
+    response = requests.post(discord_webhook, json=payload)
+    
+    if response.status_code in [200, 204]:
+        print("Successfully sent success notification to Discord!")
+    else:
+        print(f"Discord notification failed. Status: {response.status_code}")
 
 elif command == "error":
     error_msg = "An unknown error occurred during execution."
