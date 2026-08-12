@@ -3,8 +3,8 @@ import time
 import random
 import requests
 from moviepy import VideoFileClip, AudioFileClip, concatenate_videoclips, concatenate_audioclips
-# Import the fading effects
-from moviepy.video.fx.all import fadein, fadeout
+# Updated MoviePy 2.0 imports for smooth fade effects
+from moviepy.video.fx import FadeIn, FadeOut
 
 # --- 1. SETTINGS & KEYS ---
 pixabay_key = os.environ.get("PIXABAY_API_KEY")
@@ -90,8 +90,8 @@ if not audio_downloaded:
 # --- 4. RENDER DUAL FORMAT VIDEOS FROM ONE SOURCE ---
 print("--- 3. RENDERING HORIZONTAL & CROPPED VERTICAL VIDEOS ---")
 
-# ADDED FADES: This applies a 1-second fade in/out so the loops transition smoothly!
-base_video_clip = VideoFileClip(VIDEO_FILE).fx(fadein, 1).fx(fadeout, 1)
+# ADDED FADES: MoviePy 2.0 syntax to transition smoothly between loops!
+base_video_clip = VideoFileClip(VIDEO_FILE).with_effects([FadeIn(1), FadeOut(1)])
 audio_clip = AudioFileClip(AUDIO_FILE)
 
 def build_media(v_clip, a_clip, target_dur):
