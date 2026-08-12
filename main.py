@@ -16,12 +16,21 @@ HORIZONTAL_DURATION = 30
 VERTICAL_DURATION = 15     
 
 # --- 2. FETCH RANDOM NATURE VIDEO (PIXABAY API) ---
-NATURE_TOPICS = [
-    "forest stream", "ocean waves", "waterfall mist", 
-    "mountain river", "rain leaves", "peaceful lake"
-]
+# We map each video topic directly to its matching Google Sound Library URL!
+THEME_MAP = {
+    "forest stream": "https://actions.google.com/sounds/v1/ambiences/outdoor_river_stream.ogg",
+    "mountain river": "https://actions.google.com/sounds/v1/ambiences/outdoor_river_stream.ogg",
+    "waterfall mist": "https://actions.google.com/sounds/v1/ambiences/outdoor_river_stream.ogg",
+    "ocean waves": "https://actions.google.com/sounds/v1/water/ocean_waves.ogg",
+    "rain leaves": "https://actions.google.com/sounds/v1/weather/rain_heavy_loud.ogg",
+    "peaceful lake": "https://actions.google.com/sounds/v1/ambiences/forest_birds.ogg"
+}
 
-selected_topic = random.choice(NATURE_TOPICS)
+# Pick a random theme
+selected_topic = random.choice(list(THEME_MAP.keys()))
+# Automatically grab the perfectly matching sound for this theme!
+selected_sound_url = THEME_MAP[selected_topic] 
+
 print(f"--- 1. SEARCHING PIXABAY VIDEO FOR THEME: '{selected_topic}' ---")
 
 pixabay_video_url = f"https://pixabay.com/api/videos/?key={pixabay_key}&q={selected_topic}&per_page=30"
@@ -64,14 +73,8 @@ with open(VIDEO_FILE, "wb") as f:
     f.write(video_data.content)
 print(f"Saved nature video: {VIDEO_FILE}")
 
-# --- 3. DOWNLOAD AMBIENT NATURE SOUNDS (GOOGLE LIBRARY) ---
-print("--- 2. FETCHING HIGH-QUALITY NATURE SOUNDS ---")
-NATURE_SOUND_URLS = [
-    "https://actions.google.com/sounds/v1/ambiences/outdoor_river_stream.ogg",
-    "https://actions.google.com/sounds/v1/weather/rain_heavy_loud.ogg",
-    "https://actions.google.com/sounds/v1/water/ocean_waves.ogg",
-    "https://actions.google.com/sounds/v1/ambiences/forest_birds.ogg"
-]
+# --- 3. DOWNLOAD MATCHING NATURE SOUNDS (GOOGLE LIBRARY) ---
+print("--- 2. FETCHING PERFECTLY MATCHING NATURE SOUNDS ---")
 
 AUDIO_FILE = "nature_sound.ogg"
 audio_headers = {
@@ -79,15 +82,14 @@ audio_headers = {
 }
 audio_downloaded = False
 
-print("Downloading nature sound track...")
+print("Downloading matching nature sound track...")
 for attempt in range(3):
-    selected_sound_url = random.choice(NATURE_SOUND_URLS)
     audio_data = requests.get(selected_sound_url, headers=audio_headers, allow_redirects=True)
     
     if audio_data.status_code == 200 and len(audio_data.content) > 1000:
         with open(AUDIO_FILE, "wb") as f:
             f.write(audio_data.content)
-        print("Nature sound downloaded successfully!")
+        print("Matching nature sound downloaded successfully!")
         audio_downloaded = True
         break
     else:
