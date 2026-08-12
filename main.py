@@ -16,12 +16,8 @@ VERTICAL_DURATION = 15
 
 # --- 2. FETCH RANDOM NATURE VIDEO (PIXABAY API) ---
 NATURE_TOPICS = [
-    "forest stream",
-    "ocean waves",
-    "waterfall mist",
-    "mountain river",
-    "rain leaves",
-    "peaceful lake"
+    "forest stream", "ocean waves", "waterfall mist", 
+    "mountain river", "rain leaves", "peaceful lake"
 ]
 
 selected_topic = random.choice(NATURE_TOPICS)
@@ -62,7 +58,6 @@ NATURE_SOUND_URLS = [
 
 AUDIO_FILE = "nature_sound.ogg"
 
-# Keeping the browser mask to give the highest chance of bypassing Google's firewall
 audio_headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
@@ -73,7 +68,6 @@ for attempt in range(3):
     selected_sound_url = random.choice(NATURE_SOUND_URLS)
     audio_data = requests.get(selected_sound_url, headers=audio_headers, allow_redirects=True)
     
-    # Check if we got a real audio file and not a blank error page
     if audio_data.status_code == 200 and len(audio_data.content) > 1000:
         with open(AUDIO_FILE, "wb") as f:
             f.write(audio_data.content)
@@ -84,7 +78,6 @@ for attempt in range(3):
         print(f"Server overloaded or blocked (Status {audio_data.status_code}). Retrying in 2 seconds...")
         time.sleep(2)
 
-# Failsafe backup if Google blocks all 3 attempts
 if not audio_downloaded:
     print("Google Library blocked the request. Switching to reliable backup audio server...")
     backup_url = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
@@ -97,7 +90,6 @@ print("--- 3. RENDERING HORIZONTAL & CROPPED VERTICAL VIDEOS ---")
 base_video_clip = VideoFileClip(VIDEO_FILE)
 audio_clip = AudioFileClip(AUDIO_FILE)
 
-# Helper function to prepare clips for target durations
 def build_media(v_clip, a_clip, target_dur):
     if v_clip.duration < target_dur:
         loops = int(target_dur // v_clip.duration) + 1
@@ -115,45 +107,22 @@ def build_media(v_clip, a_clip, target_dur):
     
     return v_out.with_audio(a_out)
 
-# 1. Render Full Horizontal Video (30s)
 print("Rendering horizontal_short.mp4...")
 horiz_final = build_media(base_video_clip, audio_clip, HORIZONTAL_DURATION)
 horiz_final.write_videofile("horizontal_short.mp4", fps=24, codec="libx264", audio_codec="aac")
 
-# 2. Crop Horizontal Video into Vertical Short (15s)
 print("Rendering vertical_short.mp4 by cropping horizontal source...")
 w, h = base_video_clip.size
-target_width = int(h * 9 / 16) # Calculate 9:16 width based on height
+target_width = int(h * 9 / 16)
+target_height = int(h)
 
-cropped_base = base_video_clip.cropped(width=target_width, height=h, x_center=w/2, y_center=h/2)
+if target_width % 2 != 0:
+    target_width -= 1
+if target_height % 2 != 0:
+    target_height -= 1
+
+cropped_base = base_video_clip.cropped(width=target_width, height=target_height, x_center=w/2, y_center=h/2)
 vert_final = build_media(cropped_base, audio_clip, VERTICAL_DURATION)
 vert_final.write_videofile("vertical_short.mp4", fps=24, codec="libx264", audio_codec="aac")
 
 print("SUCCESS! Both formats successfully generated from one video source!")
-
-# --- 5. SEND TO DISCORD ---
-discord_webhook = os.environ.get("DISCORD_WEBHOOK_URL")
-
-if discord_webhook:
-    print("--- 4. UPLOADING TO DISCORD ---")
-    
-    # We will upload both the horizontal and vertical versions
-    files_to_upload = ["horizontal_short.mp4", "vertical_short.mp4"]
-    
-    for vid_file in files_to_upload:
-        if os.path.exists(vid_file):
-            print(f"Sending {vid_file} to Discord...")
-            with open(vid_file, "rb") as f:
-                # Add your custom YouTube title to the Discord message
-                payload = {
-                    "content": f"✅ Your automated nature video is ready: **{vid_file}**\nTarget Title: *Rest up, enjoy the Nature*"
-                }
-                files = {"file": (vid_file, f, "video/mp4")}
-                
-                # Push the file to the Discord server
-                response = requests.post(discord_webhook, data=payload, files=files)
-                
-                if response.status_code in [200, 204]:
-                    print(f"Successfully sent {vid_file} to Discord!")
-                else:
-                    print(f"Discord upload failed for {vid_file}. Status: {response.status_code}")
