@@ -3,8 +3,6 @@ import time
 import random
 import requests
 from moviepy import VideoFileClip, AudioFileClip, concatenate_videoclips, concatenate_audioclips
-# Updated MoviePy 2.0 imports for smooth fade effects
-from moviepy.video.fx import FadeIn, FadeOut
 
 # --- 1. SETTINGS & KEYS ---
 pixabay_key = os.environ.get("PIXABAY_API_KEY")
@@ -13,7 +11,7 @@ if not pixabay_key:
     print("Error: Missing PIXABAY_API_KEY environment variable!")
     exit(1)
 
-# Back to 30 seconds for debugging
+# Kept short for debugging the visual loops
 HORIZONTAL_DURATION = 30  
 VERTICAL_DURATION = 15     
 
@@ -26,16 +24,32 @@ NATURE_TOPICS = [
 selected_topic = random.choice(NATURE_TOPICS)
 print(f"--- 1. SEARCHING PIXABAY VIDEO FOR THEME: '{selected_topic}' ---")
 
-pixabay_video_url = f"https://pixabay.com/api/videos/?key={pixabay_key}&q={selected_topic}&per_page=15"
+pixabay_video_url = f"https://pixabay.com/api/videos/?key={pixabay_key}&q={selected_topic}&per_page=30"
 video_response = requests.get(pixabay_video_url).json()
 video_hits = video_response.get("hits", [])
 
-if not video_hits:
-    pixabay_video_url = f"https://pixabay.com/api/videos/?key={pixabay_key}&q=nature&per_page=10"
+# STRICT FILTER: Only keep videos that are true Widescreen Horizontal (Width > Height)
+horizontal_hits = []
+for v in video_hits:
+    med = v.get("videos", {}).get("medium", {})
+    if med.get("width", 0) > med.get("height", 0):
+        horizontal_hits.append(v)
+
+# Fallback just in case the first search fails
+if not horizontal_hits:
+    pixabay_video_url = f"https://pixabay.com/api/videos/?key={pixabay_key}&q=nature&per_page=20"
     video_response = requests.get(pixabay_video_url).json()
     video_hits = video_response.get("hits", [])
+    for v in video_hits:
+        med = v.get("videos", {}).get("medium", {})
+        if med.get("width", 0) > med.get("height", 0):
+            horizontal_hits.append(v)
 
-chosen_video = random.choice(video_hits)
+# Extra safety net to prevent crashes
+if not horizontal_hits and video_hits:
+    horizontal_hits.append(video_hits[0])
+
+chosen_video = random.choice(horizontal_hits)
 video_variants = chosen_video.get("videos", {})
 download_video_url = (
     video_variants.get("large", {}).get("url") or 
@@ -44,7 +58,7 @@ download_video_url = (
 )
 
 VIDEO_FILE = "background.mp4"
-print("Downloading nature video from Pixabay...")
+print("Downloading true horizontal nature video from Pixabay...")
 video_data = requests.get(download_video_url)
 with open(VIDEO_FILE, "wb") as f:
     f.write(video_data.content)
@@ -90,8 +104,8 @@ if not audio_downloaded:
 # --- 4. RENDER DUAL FORMAT VIDEOS FROM ONE SOURCE ---
 print("--- 3. RENDERING HORIZONTAL & CROPPED VERTICAL VIDEOS ---")
 
-# ADDED FADES: MoviePy 2.0 syntax to transition smoothly between loops!
-base_video_clip = VideoFileClip(VIDEO_FILE).with_effects([FadeIn(1), FadeOut(1)])
+# STRIPPED OUT THE FADES: Normal hard cuts blend much better for continuous nature scenes.
+base_video_clip = VideoFileClip(VIDEO_FILE)
 audio_clip = AudioFileClip(AUDIO_FILE)
 
 def build_media(v_clip, a_clip, target_dur):
