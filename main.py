@@ -3,68 +3,44 @@ import time
 import random
 import requests
 import sys
-from google import genai
 from moviepy import ImageClip, AudioFileClip, concatenate_audioclips
 
 # --- 1. SETTINGS & KEYS ---
-gemini_key = os.environ.get("GEMINI_API_KEY")
 pixabay_key = os.environ.get("PIXABAY_API_KEY")
 
-if not gemini_key or not pixabay_key:
-    print("Error: Missing GEMINI_API_KEY or PIXABAY_API_KEY environment variables!")
+if not pixabay_key:
+    print("Error: Missing PIXABAY_API_KEY environment variable!")
     sys.exit(1)
 
 # Kept short for testing
 HORIZONTAL_DURATION = 30  
 VERTICAL_DURATION = 15     
 
-# --- 2. GENERATE COZY CAFE IMAGE (GOOGLE IMAGEN 3) ---
-print("--- 1. GENERATING COZY CAFE IMAGE VIA GEMINI/IMAGEN ---")
+# --- 2. FETCH COZY CAFE IMAGE (PIXABAY) ---
+print("--- 1. FETCHING COZY CAFE IMAGE FROM PIXABAY ---")
 IMAGE_FILE = "background.jpg"
 
-try:
-    client = genai.Client(api_key=gemini_key)
-    
-    # We randomize the prompt slightly so every video is unique!
-    atmospheres = ["raining outside", "warm sunset glowing", "snowing gently outside", "starry night sky"]
-    chosen_atmosphere = random.choice(atmospheres)
-    
-    prompt = (
-        f"A cozy, warm, and inviting cafe interior, soft warm ambient lighting, "
-        f"a steaming cup of coffee on a wooden table, large window showing {chosen_atmosphere}, "
-        f"lofi aesthetic, anime style or digital painting masterpiece, high quality, highly detailed."
-    )
-    
-    print(f"Prompting AI: {prompt}")
-    
-    # FIX: Using generate_content perfectly supports standard API keys!
-    response = client.models.generate_content(
-        model='imagen-3.0-generate-002',
-        contents=prompt,
-        config={
-            "output_mime_type": "image/jpeg",
-            "image_config": {
-                "aspect_ratio": "16:9"
-            }
-        }
-    )
-    
-    # Extract and save the raw image bytes from the new response format
-    image_saved = False
-    for part in response.parts:
-        if part.inline_data:
-            with open(IMAGE_FILE, "wb") as f:
-                f.write(part.inline_data.data)
-            print("SUCCESS: AI Image generated and saved!")
-            image_saved = True
-            break
-            
-    if not image_saved:
-        raise ValueError("AI processed the prompt but did not return image data.")
-    
-except Exception as e:
-    print(f"CRITICAL ERROR generating image: {e}")
-    sys.exit(1)
+cafe_queries = ["cozy cafe interior", "coffee shop aesthetic", "lofi room window rain", "warm coffee shop"]
+selected_query = random.choice(cafe_queries)
+print(f"Searching image for: '{selected_query}'")
+
+pixabay_image_url = f"https://pixabay.com/api/?key={pixabay_key}&q={selected_query}&image_type=photo&orientation=horizontal&per_page=20"
+img_response = requests.get(pixabay_image_url).json()
+img_hits = img_response.get("hits", [])
+
+if not img_hits:
+    pixabay_image_url = f"https://pixabay.com/api/?key={pixabay_key}&q=cafe&image_type=photo&orientation=horizontal&per_page=10"
+    img_response = requests.get(pixabay_image_url).json()
+    img_hits = img_response.get("hits", [])
+
+chosen_img = random.choice(img_hits)
+download_image_url = chosen_img.get("largeImageURL") or chosen_img.get("webformatURL")
+
+print("Downloading cozy background image...")
+img_data = requests.get(download_image_url)
+with open(IMAGE_FILE, "wb") as f:
+    f.write(img_data.content)
+print(f"Saved background image: {IMAGE_FILE}")
 
 # --- 3. DOWNLOAD LOFI / JAZZ MUSIC (PIXABAY) ---
 print("--- 2. FETCHING RELAXING LOFI / JAZZ AUDIO ---")
@@ -98,7 +74,7 @@ except Exception as e:
 # Backup if Pixabay fails
 if not audio_downloaded:
     print("Switching to reliable backup Lofi/Chill stream...")
-    backup_url = "https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3" 
+    backup_url = "https://assets.mixkit.co/active_storage/sfx/1255/1255-preview.mp3"
     audio_data = requests.get(backup_url, headers=audio_headers, allow_redirects=True)
     with open(AUDIO_FILE, "wb") as f:
         f.write(audio_data.content)
