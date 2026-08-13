@@ -12,28 +12,49 @@ if not pixabay_key:
     print("Error: Missing PIXABAY_API_KEY environment variable!")
     sys.exit(1)
 
-HORIZONTAL_DURATION = 30  # 30 seconds
-VERTICAL_DURATION = 15     # 15 seconds
+# Kept short for testing
+HORIZONTAL_DURATION = 30  
+VERTICAL_DURATION = 15     
 
-# --- 2. FETCH RANDOM NATURE VIDEO (PIXABAY API) ---
-NATURE_TOPICS = [
-    "forest stream", "ocean waves", "waterfall mist", 
-    "mountain river", "rain leaves", "peaceful lake"
-]
+# --- 2. SMART THEME MAPPING ---
+# This ensures the video topic perfectly matches the audio search query!
+NATURE_MAP = {
+    "forest stream": "water stream",
+    "ocean waves": "ocean waves",
+    "waterfall mist": "waterfall",
+    "mountain river": "river",
+    "rain leaves": "rain",
+    "peaceful lake": "forest birds"
+}
 
-selected_topic = random.choice(NATURE_TOPICS)
-print(f"--- 1. SEARCHING PIXABAY VIDEO FOR THEME: '{selected_topic}' ---")
+selected_video_topic = random.choice(list(NATURE_MAP.keys()))
+selected_audio_query = NATURE_MAP[selected_video_topic]
 
-pixabay_video_url = f"https://pixabay.com/api/videos/?key={pixabay_key}&q={selected_topic}&per_page=15"
+# --- 3. FETCH STRICTLY HORIZONTAL VIDEO (PIXABAY) ---
+print(f"--- 1. SEARCHING PIXABAY VIDEO FOR THEME: '{selected_video_topic}' ---")
+
+pixabay_video_url = f"https://pixabay.com/api/videos/?key={pixabay_key}&q={selected_video_topic}&per_page=20"
 video_response = requests.get(pixabay_video_url).json()
 video_hits = video_response.get("hits", [])
 
-if not video_hits:
-    pixabay_video_url = f"https://pixabay.com/api/videos/?key={pixabay_key}&q=nature&per_page=10"
+# STRICT FILTER: Only keep videos that are true Widescreen (Width > Height)
+horizontal_hits = []
+for v in video_hits:
+    med = v.get("videos", {}).get("medium", {})
+    if med.get("width", 0) > med.get("height", 0):
+        horizontal_hits.append(v)
+
+if not horizontal_hits:
+    print("No horizontal videos found for specific topic. Searching generic nature...")
+    pixabay_video_url = f"https://pixabay.com/api/videos/?key={pixabay_key}&q=nature&per_page=20"
     video_response = requests.get(pixabay_video_url).json()
     video_hits = video_response.get("hits", [])
+    for v in video_hits:
+        med = v.get("videos", {}).get("medium", {})
+        if med.get("width", 0) > med.get("height", 0):
+            horizontal_hits.append(v)
 
-chosen_video = random.choice(video_hits)
+chosen_video = random.choice(horizontal_hits)
 video_variants = chosen_video.get("videos", {})
 download_video_url = (
     video_variants.get("large", {}).get("url") or 
@@ -42,27 +63,24 @@ download_video_url = (
 )
 
 VIDEO_FILE = "background.mp4"
-print("Downloading nature video from Pixabay...")
+print("Downloading true horizontal nature video from Pixabay...")
 video_data = requests.get(download_video_url)
 with open(VIDEO_FILE, "wb") as f:
     f.write(video_data.content)
-print(f"Saved nature video: {VIDEO_FILE}")
+print(f"Saved horizontal video: {VIDEO_FILE}")
 
-# --- 3. DOWNLOAD AMBIENT NATURE SOUNDS (MULTI-LAYERED) ---
-print("--- 2. FETCHING HIGH-QUALITY NATURE SOUNDS ---")
+# --- 4. DOWNLOAD MATCHING NATURE SOUNDS (MULTI-LAYERED) ---
+print(f"--- 2. FETCHING MATCHING AUDIO FOR '{selected_audio_query}' ---")
 AUDIO_FILE = "nature_sound.mp3"
 audio_headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
 }
 audio_downloaded = False
 
-# LAYER 1: PIXABAY AUDIO API (Main)
+# LAYER 1: PIXABAY AUDIO API (Perfectly Matched Sound)
 print("Attempting Layer 1: Pixabay Audio API...")
 try:
-    AUDIO_QUERIES = ["water stream", "rain", "forest birds", "ocean waves"]
-    chosen_audio_query = random.choice(AUDIO_QUERIES)
-    pixabay_audio_url = f"https://pixabay.com/api/audio/?key={pixabay_key}&q={chosen_audio_query}&per_page=10"
-    
+    pixabay_audio_url = f"https://pixabay.com/api/audio/?key={pixabay_key}&q={selected_audio_query}&per_page=10"
     audio_response = requests.get(pixabay_audio_url).json()
     audio_hits = audio_response.get("hits", [])
     
@@ -74,44 +92,22 @@ try:
         if audio_data.status_code == 200 and len(audio_data.content) > 10000:
             with open(AUDIO_FILE, "wb") as f:
                 f.write(audio_data.content)
-            print("Pixabay nature sound downloaded successfully!")
+            print(f"Pixabay matched sound ({selected_audio_query}) downloaded successfully!")
             audio_downloaded = True
 except Exception as e:
     print(f"Layer 1 Failed: {e}")
 
-# LAYER 2: MIXKIT DIRECT LINKS (Backup)
+# LAYER 2: MIXKIT FAILSAFE (Generic Nature)
 if not audio_downloaded:
-    print("Attempting Layer 2: Mixkit Direct Links...")
-    MIXKIT_URLS = [
-        "https://assets.mixkit.co/active_storage/sfx/1255/1255-preview.mp3",
-        "https://assets.mixkit.co/active_storage/sfx/1251/1251-preview.mp3",
-        "https://assets.mixkit.co/active_storage/sfx/1245/1245-preview.mp3"
-    ]
-    for attempt in range(2):
-        try:
-            mixkit_url = random.choice(MIXKIT_URLS)
-            audio_data = requests.get(mixkit_url, headers=audio_headers, allow_redirects=True, timeout=15)
-            if audio_data.status_code == 200 and len(audio_data.content) > 10000:
-                with open(AUDIO_FILE, "wb") as f:
-                    f.write(audio_data.content)
-                print("Mixkit backup sound downloaded successfully!")
-                audio_downloaded = True
-                break
-        except Exception as e:
-            print(f"Mixkit attempt {attempt + 1} failed. Retrying...")
-            time.sleep(2)
-
-# LAYER 3: EMERGENCY FAILSAFE (Guaranteed Stream)
-if not audio_downloaded:
-    print("Attempting Layer 3: Emergency Failsafe Stream...")
+    print("Layer 1 Failed. Switching to Layer 2 Mixkit Failsafe...")
     backup_url = "https://assets.mixkit.co/active_storage/sfx/1255/1255-preview.mp3"
     audio_data = requests.get(backup_url, headers=audio_headers, allow_redirects=True)
     with open(AUDIO_FILE, "wb") as f:
         f.write(audio_data.content)
     print("Emergency backup audio secured.")
 
-# --- 4. RENDER DUAL FORMAT VIDEOS FROM ONE SOURCE ---
-print("--- 3. RENDERING HORIZONTAL (10 MIN) & CROPPED VERTICAL (15 SEC) VIDEOS ---")
+# --- 5. RENDER DUAL FORMAT VIDEOS ---
+print("--- 3. RENDERING HORIZONTAL (30s) & CROPPED VERTICAL (15s) VIDEOS ---")
 base_video_clip = VideoFileClip(VIDEO_FILE)
 audio_clip = AudioFileClip(AUDIO_FILE)
 
@@ -140,6 +136,12 @@ print("Rendering vertical_short.mp4 by cropping horizontal source...")
 w, h = base_video_clip.size
 target_width = int(h * 9 / 16)
 target_height = int(h)
+
+# ENSURE EVEN DIMENSIONS SO IT DOESN'T CRASH MEDIA PLAYERS
+if target_width % 2 != 0:
+    target_width -= 1
+if target_height % 2 != 0:
+    target_height -= 1
 
 cropped_base = base_video_clip.cropped(width=target_width, height=target_height, x_center=w/2, y_center=h/2)
 vert_final = build_media(cropped_base, audio_clip, VERTICAL_DURATION)
