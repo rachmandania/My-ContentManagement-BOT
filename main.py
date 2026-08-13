@@ -16,19 +16,38 @@ if not pixabay_key:
 HORIZONTAL_DURATION = 30  
 VERTICAL_DURATION = 15     
 
-# --- 2. SMART THEME MAPPING ---
-# This ensures the video topic perfectly matches the audio search query!
+# --- 2. ADVANCED THEME MAPPING ---
+# Maps the video topic to BOTH a Pixabay search query AND a perfectly matching Mixkit backup URL
 NATURE_MAP = {
-    "forest stream": "water stream",
-    "ocean waves": "ocean waves",
-    "waterfall mist": "waterfall",
-    "mountain river": "river",
-    "rain leaves": "rain",
-    "peaceful lake": "forest birds"
+    "forest stream": {
+        "query": "water stream", 
+        "backup": "https://assets.mixkit.co/active_storage/sfx/1255/1255-preview.mp3" # Stream/Water
+    },
+    "ocean waves": {
+        "query": "ocean waves", 
+        "backup": "https://assets.mixkit.co/active_storage/sfx/1255/1255-preview.mp3" # Stream/Water
+    },
+    "waterfall mist": {
+        "query": "waterfall", 
+        "backup": "https://assets.mixkit.co/active_storage/sfx/1255/1255-preview.mp3" # Stream/Water
+    },
+    "mountain river": {
+        "query": "river", 
+        "backup": "https://assets.mixkit.co/active_storage/sfx/1255/1255-preview.mp3" # Stream/Water
+    },
+    "rain leaves": {
+        "query": "rain", 
+        "backup": "https://assets.mixkit.co/active_storage/sfx/1245/1245-preview.mp3" # Rain
+    },
+    "peaceful lake": {
+        "query": "forest birds", 
+        "backup": "https://assets.mixkit.co/active_storage/sfx/1251/1251-preview.mp3" # Birds
+    }
 }
 
 selected_video_topic = random.choice(list(NATURE_MAP.keys()))
-selected_audio_query = NATURE_MAP[selected_video_topic]
+selected_audio_query = NATURE_MAP[selected_video_topic]["query"]
+selected_backup_url = NATURE_MAP[selected_video_topic]["backup"]
 
 # --- 3. FETCH STRICTLY HORIZONTAL VIDEO (PIXABAY) ---
 print(f"--- 1. SEARCHING PIXABAY VIDEO FOR THEME: '{selected_video_topic}' ---")
@@ -53,6 +72,9 @@ if not horizontal_hits:
         med = v.get("videos", {}).get("medium", {})
         if med.get("width", 0) > med.get("height", 0):
             horizontal_hits.append(v)
+
+if not horizontal_hits and video_hits:
+    horizontal_hits.append(video_hits[0])
 
 chosen_video = random.choice(horizontal_hits)
 video_variants = chosen_video.get("videos", {})
@@ -97,14 +119,21 @@ try:
 except Exception as e:
     print(f"Layer 1 Failed: {e}")
 
-# LAYER 2: MIXKIT FAILSAFE (Generic Nature)
+# LAYER 2 & 3: EXACT MIXKIT FAILSAFE (Guaranteed Match)
 if not audio_downloaded:
-    print("Layer 1 Failed. Switching to Layer 2 Mixkit Failsafe...")
-    backup_url = "https://assets.mixkit.co/active_storage/sfx/1255/1255-preview.mp3"
-    audio_data = requests.get(backup_url, headers=audio_headers, allow_redirects=True)
-    with open(AUDIO_FILE, "wb") as f:
-        f.write(audio_data.content)
-    print("Emergency backup audio secured.")
+    print("Layer 1 Failed. Switching to guaranteed matching Mixkit backup...")
+    for attempt in range(2):
+        try:
+            audio_data = requests.get(selected_backup_url, headers=audio_headers, allow_redirects=True, timeout=15)
+            if audio_data.status_code == 200 and len(audio_data.content) > 10000:
+                with open(AUDIO_FILE, "wb") as f:
+                    f.write(audio_data.content)
+                print("Mixkit backup sound downloaded successfully!")
+                audio_downloaded = True
+                break
+        except Exception as e:
+            print(f"Mixkit attempt {attempt + 1} failed. Retrying...")
+            time.sleep(2)
 
 # --- 5. RENDER DUAL FORMAT VIDEOS ---
 print("--- 3. RENDERING HORIZONTAL (30s) & CROPPED VERTICAL (15s) VIDEOS ---")
