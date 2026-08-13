@@ -12,7 +12,7 @@ if not pixabay_key:
     print("Error: Missing PIXABAY_API_KEY environment variable!")
     sys.exit(1)
 
-HORIZONTAL_DURATION = 600  # 10 minutes
+HORIZONTAL_DURATION = 30  # 30 seconds
 VERTICAL_DURATION = 15     # 15 seconds
 
 # --- 2. FETCH RANDOM NATURE VIDEO (PIXABAY API) ---
