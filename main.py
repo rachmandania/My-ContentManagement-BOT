@@ -12,46 +12,28 @@ if not pixabay_key:
     print("Error: Missing PIXABAY_API_KEY environment variable!")
     sys.exit(1)
 
-HORIZONTAL_DURATION = 30
-VERTICAL_DURATION = 15
+HORIZONTAL_DURATION = 600  # 10 minutes
+VERTICAL_DURATION = 15     # 15 seconds
 
 # --- 2. FETCH RANDOM NATURE VIDEO (PIXABAY API) ---
-THEME_MAP = {
-    "forest stream": "https://archive.org/download/NatureSounds_201709/02%20Stream%20Water.mp3",
-    "mountain river": "https://archive.org/download/NatureSounds_201709/02%20Stream%20Water.mp3",
-    "waterfall mist": "https://archive.org/download/NatureSounds_201709/02%20Stream%20Water.mp3",
-    "ocean waves": "https://archive.org/download/NatureSounds_201709/01%20Rain%20%26%20Thunder.mp3",
-    "rain leaves": "https://archive.org/download/NatureSounds_201709/01%20Rain%20%26%20Thunder.mp3",
-    "peaceful lake": "https://archive.org/download/NatureSounds_201709/03%20Forest%20Birds.mp3"
-}
+NATURE_TOPICS = [
+    "forest stream", "ocean waves", "waterfall mist", 
+    "mountain river", "rain leaves", "peaceful lake"
+]
 
-selected_topic = random.choice(list(THEME_MAP.keys()))
-selected_sound_url = THEME_MAP[selected_topic] 
-
+selected_topic = random.choice(NATURE_TOPICS)
 print(f"--- 1. SEARCHING PIXABAY VIDEO FOR THEME: '{selected_topic}' ---")
-pixabay_video_url = f"https://pixabay.com/api/videos/?key={pixabay_key}&q={selected_topic}&per_page=30"
+
+pixabay_video_url = f"https://pixabay.com/api/videos/?key={pixabay_key}&q={selected_topic}&per_page=15"
 video_response = requests.get(pixabay_video_url).json()
 video_hits = video_response.get("hits", [])
 
-horizontal_hits = []
-for v in video_hits:
-    med = v.get("videos", {}).get("medium", {})
-    if med.get("width", 0) > med.get("height", 0):
-        horizontal_hits.append(v)
-
-if not horizontal_hits:
-    pixabay_video_url = f"https://pixabay.com/api/videos/?key={pixabay_key}&q=nature&per_page=20"
+if not video_hits:
+    pixabay_video_url = f"https://pixabay.com/api/videos/?key={pixabay_key}&q=nature&per_page=10"
     video_response = requests.get(pixabay_video_url).json()
     video_hits = video_response.get("hits", [])
-    for v in video_hits:
-        med = v.get("videos", {}).get("medium", {})
-        if med.get("width", 0) > med.get("height", 0):
-            horizontal_hits.append(v)
 
-if not horizontal_hits and video_hits:
-    horizontal_hits.append(video_hits[0])
-
-chosen_video = random.choice(horizontal_hits)
+chosen_video = random.choice(video_hits)
 video_variants = chosen_video.get("videos", {})
 download_video_url = (
     video_variants.get("large", {}).get("url") or 
@@ -60,50 +42,76 @@ download_video_url = (
 )
 
 VIDEO_FILE = "background.mp4"
-print("Downloading true horizontal nature video from Pixabay...")
+print("Downloading nature video from Pixabay...")
 video_data = requests.get(download_video_url)
 with open(VIDEO_FILE, "wb") as f:
     f.write(video_data.content)
 print(f"Saved nature video: {VIDEO_FILE}")
 
-# --- 3. DOWNLOAD AMBIENT NATURE SOUNDS (WITH SAFETY CHECKS) ---
-print("--- 2. FETCHING PERFECTLY MATCHING NATURE SOUNDS ---")
+# --- 3. DOWNLOAD AMBIENT NATURE SOUNDS (MULTI-LAYERED) ---
+print("--- 2. FETCHING HIGH-QUALITY NATURE SOUNDS ---")
 AUDIO_FILE = "nature_sound.mp3"
 audio_headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
 audio_downloaded = False
 
-# We will try up to 5 times to get a real audio file
-for attempt in range(5):
-    print(f"Attempt {attempt + 1}: Downloading audio track...")
-    try:
-        audio_data = requests.get(selected_sound_url, headers=audio_headers, allow_redirects=True, timeout=15)
-        # A real MP3 is several megabytes. If the content is tiny, it's an error webpage.
-        if audio_data.status_code == 200 and len(audio_data.content) > 50000:
+# LAYER 1: PIXABAY AUDIO API (Main)
+print("Attempting Layer 1: Pixabay Audio API...")
+try:
+    AUDIO_QUERIES = ["water stream", "rain", "forest birds", "ocean waves"]
+    chosen_audio_query = random.choice(AUDIO_QUERIES)
+    pixabay_audio_url = f"https://pixabay.com/api/audio/?key={pixabay_key}&q={chosen_audio_query}&per_page=10"
+    
+    audio_response = requests.get(pixabay_audio_url).json()
+    audio_hits = audio_response.get("hits", [])
+    
+    if audio_hits:
+        chosen_track = random.choice(audio_hits)
+        audio_download_url = chosen_track["download"]
+        audio_data = requests.get(audio_download_url, headers=audio_headers, timeout=15)
+        
+        if audio_data.status_code == 200 and len(audio_data.content) > 10000:
             with open(AUDIO_FILE, "wb") as f:
                 f.write(audio_data.content)
-            print("Matching nature sound downloaded successfully!")
+            print("Pixabay nature sound downloaded successfully!")
             audio_downloaded = True
-            break
-        else:
-            print(f"Server returned HTML or error (Status {audio_data.status_code}). Retrying in 5 seconds...")
-            time.sleep(5)
-    except Exception as e:
-        print(f"Connection dropped. Retrying in 5 seconds...")
-        time.sleep(5)
+except Exception as e:
+    print(f"Layer 1 Failed: {e}")
 
-# If all 5 attempts fail, use a guaranteed Wikipedia nature stream instead of a techno song
+# LAYER 2: MIXKIT DIRECT LINKS (Backup)
 if not audio_downloaded:
-    print("Archive.org is heavily overloaded. Switching to emergency Wikipedia nature stream...")
-    AUDIO_FILE = "nature_sound.ogg" # Switch to OGG for Wikipedia
-    emergency_url = "https://upload.wikimedia.org/wikipedia/commons/2/21/Forest_birds_and_stream.ogg"
-    audio_data = requests.get(emergency_url, headers=audio_headers, allow_redirects=True)
+    print("Attempting Layer 2: Mixkit Direct Links...")
+    MIXKIT_URLS = [
+        "https://assets.mixkit.co/active_storage/sfx/1255/1255-preview.mp3",
+        "https://assets.mixkit.co/active_storage/sfx/1251/1251-preview.mp3",
+        "https://assets.mixkit.co/active_storage/sfx/1245/1245-preview.mp3"
+    ]
+    for attempt in range(2):
+        try:
+            mixkit_url = random.choice(MIXKIT_URLS)
+            audio_data = requests.get(mixkit_url, headers=audio_headers, allow_redirects=True, timeout=15)
+            if audio_data.status_code == 200 and len(audio_data.content) > 10000:
+                with open(AUDIO_FILE, "wb") as f:
+                    f.write(audio_data.content)
+                print("Mixkit backup sound downloaded successfully!")
+                audio_downloaded = True
+                break
+        except Exception as e:
+            print(f"Mixkit attempt {attempt + 1} failed. Retrying...")
+            time.sleep(2)
+
+# LAYER 3: EMERGENCY FAILSAFE (Guaranteed Stream)
+if not audio_downloaded:
+    print("Attempting Layer 3: Emergency Failsafe Stream...")
+    backup_url = "https://assets.mixkit.co/active_storage/sfx/1255/1255-preview.mp3"
+    audio_data = requests.get(backup_url, headers=audio_headers, allow_redirects=True)
     with open(AUDIO_FILE, "wb") as f:
         f.write(audio_data.content)
+    print("Emergency backup audio secured.")
 
 # --- 4. RENDER DUAL FORMAT VIDEOS FROM ONE SOURCE ---
-print("--- 3. RENDERING HORIZONTAL & CROPPED VERTICAL VIDEOS ---")
+print("--- 3. RENDERING HORIZONTAL (10 MIN) & CROPPED VERTICAL (15 SEC) VIDEOS ---")
 base_video_clip = VideoFileClip(VIDEO_FILE)
 audio_clip = AudioFileClip(AUDIO_FILE)
 
