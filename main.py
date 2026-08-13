@@ -14,9 +14,9 @@ if not gemini_key or not pixabay_key:
     print("Error: Missing GEMINI_API_KEY or PIXABAY_API_KEY environment variables!")
     sys.exit(1)
 
-# You mentioned 10 minutes for horizontal, 15 seconds for vertical
-HORIZONTAL_DURATION = 30   # 30 seconds in seconds
-VERTICAL_DURATION = 15     # 15 seconds
+# Kept short for testing
+HORIZONTAL_DURATION = 30  
+VERTICAL_DURATION = 15     
 
 # --- 2. GENERATE COZY CAFE IMAGE (GOOGLE IMAGEN 3) ---
 print("--- 1. GENERATING COZY CAFE IMAGE VIA GEMINI/IMAGEN ---")
@@ -37,21 +37,30 @@ try:
     
     print(f"Prompting AI: {prompt}")
     
-    result = client.models.generate_images(
+    # FIX: Using generate_content perfectly supports standard API keys!
+    response = client.models.generate_content(
         model='imagen-3.0-generate-002',
-        prompt=prompt,
-        config=dict(
-            number_of_images=1,
-            aspect_ratio="16:9",
-            output_mime_type="image/jpeg",
-        )
+        contents=prompt,
+        config={
+            "output_mime_type": "image/jpeg",
+            "image_config": {
+                "aspect_ratio": "16:9"
+            }
+        }
     )
     
-    # Save the generated image
-    image_bytes = result.generated_images[0].image.image_bytes
-    with open(IMAGE_FILE, "wb") as f:
-        f.write(image_bytes)
-    print("SUCCESS: AI Image generated and saved!")
+    # Extract and save the raw image bytes from the new response format
+    image_saved = False
+    for part in response.parts:
+        if part.inline_data:
+            with open(IMAGE_FILE, "wb") as f:
+                f.write(part.inline_data.data)
+            print("SUCCESS: AI Image generated and saved!")
+            image_saved = True
+            break
+            
+    if not image_saved:
+        raise ValueError("AI processed the prompt but did not return image data.")
     
 except Exception as e:
     print(f"CRITICAL ERROR generating image: {e}")
@@ -89,7 +98,6 @@ except Exception as e:
 # Backup if Pixabay fails
 if not audio_downloaded:
     print("Switching to reliable backup Lofi/Chill stream...")
-    # A reliable royalty-free chillhop loop
     backup_url = "https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3" 
     audio_data = requests.get(backup_url, headers=audio_headers, allow_redirects=True)
     with open(AUDIO_FILE, "wb") as f:
@@ -97,16 +105,13 @@ if not audio_downloaded:
     print("Emergency backup audio secured.")
 
 # --- 4. RENDER DUAL FORMAT VIDEOS ---
-print("--- 3. RENDERING HORIZONTAL (10 MIN) & CROPPED VERTICAL (15 SEC) ---")
-# Because we are using a static image, rendering is much faster and cleaner!
+print("--- 3. RENDERING HORIZONTAL (30 SEC) & CROPPED VERTICAL (15 SEC) ---")
 base_img_clip = ImageClip(IMAGE_FILE)
 audio_clip = AudioFileClip(AUDIO_FILE)
 
 def build_media(img_clip, a_clip, target_dur):
-    # Set the static image to last exactly the target duration
     v_out = img_clip.with_duration(target_dur)
     
-    # Loop the audio to match the 10 minute or 15 sec duration
     if a_clip.duration < target_dur:
         a_loops = int(target_dur // a_clip.duration) + 1
         a_out = concatenate_audioclips([a_clip] * a_loops)
@@ -125,7 +130,6 @@ w, h = base_img_clip.size
 target_width = int(h * 9 / 16)
 target_height = int(h)
 
-# ENSURE EVEN DIMENSIONS SO MP4 ENCODER DOESN'T CRASH
 if target_width % 2 != 0:
     target_width -= 1
 if target_height % 2 != 0:
