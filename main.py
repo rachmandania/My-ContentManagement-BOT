@@ -15,70 +15,63 @@ VERTICAL_DURATION = 15    # 15 seconds for testing
 print("--- 1. GENERATING HIGH-DEF MAGICAL CAFE IMAGE ---")
 IMAGE_FILE = "background.jpg"
 
-# Matches the vibrant, bioluminescent nature style of your example image!
 chosen_prompt = (
-    "A breathtaking, ultra-sharp, hyper-detailed digital painting of a cozy magical cafe interior. "
-    "Warm glowing lanterns and a steaming cup of coffee on a wooden table. "
+    "Super quality Hyper reallistic Cozy Stunning cafe, magical interior, "
+    "warm glowing lanterns, a steaming cup of coffee on a wooden table. "
     "Large open windows revealing a spectacular fantasy landscape with glowing bioluminescent plants, "
     "vibrant purple and pink sunset, crystal clear stream, glowing fireflies, lush colorful flowers. "
-    "Masterpiece, ethereal cinematic lighting, 8k resolution, photorealistic."
+    "Masterpiece, ethereal cinematic lighting, 8k resolution, ultra-sharp."
 )
 
 encoded_prompt = requests.utils.quote(chosen_prompt)
 random_seed = random.randint(1, 999999)
 
-# Added model=flux to guarantee the highest quality generation
 image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1920&height=1080&nologo=true&seed={random_seed}&model=flux"
 print(f"Prompt: '{chosen_prompt}' (Seed: {random_seed})")
 
-try:
-    img_data = requests.get(image_url, timeout=45)
-    if img_data.status_code == 200 and len(img_data.content) > 50000:
-        with open(IMAGE_FILE, "wb") as f:
-            f.write(img_data.content)
-        print("SUCCESS: High-Def Magical Cafe image generated and saved!")
-    else:
-        raise Exception("Failed to fetch image or received empty response.")
-except Exception as e:
-    print(f"CRITICAL ERROR generating image: {e}")
-    sys.exit(1)
+image_downloaded = False
 
-# --- 3. DOWNLOAD CALM AUDIO (6 FIREWALL-FREE LINKS) ---
-print("--- 2. FETCHING RANDOM RELAXING MUSIC ---")
-AUDIO_FILE = "cafe_music.mp3"
-audio_headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-audio_downloaded = False
-
-# 6 guaranteed Internet Archive links that WILL NOT block your GitHub script
-CALM_MUSIC_URLS = [
-    "https://archive.org/download/cd_smooth-jazz_various-artists/disc1/02.%20Various%20Artists%20-%20Midnight%20Motion.mp3", # Smooth Jazz 1
-    "https://archive.org/download/cd_smooth-jazz_various-artists/disc1/05.%20Various%20Artists%20-%20You%20Make%20Me%20Smile.mp3", # Smooth Jazz 2
-    "https://archive.org/download/cd_smooth-jazz_various-artists/disc1/08.%20Various%20Artists%20-%20Bali%20Run.mp3", # Smooth Jazz 3
-    "https://archive.org/download/cd_smooth-jazz_various-artists/disc1/04.%20Various%20Artists%20-%20She%20Could%20Be%20Mine.mp3", # Smooth Jazz 4
-    "https://archive.org/download/GymnopedieNo.1/Gymnopedie_No_1.mp3", # Classical Piano (Satie)
-    "https://archive.org/download/DebussyClairDeLune/Debussy%20-%20Clair%20de%20Lune.mp3" # Classical Piano (Debussy)
-]
-
-random.shuffle(CALM_MUSIC_URLS)
-
-for track_url in CALM_MUSIC_URLS:
+# Give the AI 3 attempts to generate the image in case the server is busy
+for attempt in range(3):
+    print(f"Attempt {attempt + 1}: Contacting AI server...")
     try:
-        print(f"Attempting to download audio track...")
-        audio_data = requests.get(track_url, headers=audio_headers, timeout=15, allow_redirects=True)
-        
-        if audio_data.status_code == 200 and len(audio_data.content) > 50000:
-            with open(AUDIO_FILE, "wb") as f:
-                f.write(audio_data.content)
-            print("SUCCESS: Random calm audio downloaded!")
-            audio_downloaded = True
+        img_data = requests.get(image_url, timeout=45)
+        if img_data.status_code == 200 and len(img_data.content) > 50000:
+            with open(IMAGE_FILE, "wb") as f:
+                f.write(img_data.content)
+            print("SUCCESS: High-Def Magical Cafe image generated and saved!")
+            image_downloaded = True
             break
+        else:
+            print("Server returned empty data. Retrying in 5 seconds...")
+            time.sleep(5)
     except Exception as e:
-        print(f"Track download failed ({e}), trying next track in playlist...")
-        time.sleep(1)
+        print(f"Connection timeout: {e}. Retrying in 5 seconds...")
+        time.sleep(5)
 
-if not audio_downloaded:
-    print("CRITICAL ERROR: All 6 audio links failed to download.")
+if not image_downloaded:
+    print("CRITICAL ERROR: AI Image generator failed after 3 attempts.")
     sys.exit(1)
+
+# --- 3. LOAD RANDOM LOCAL AUDIO ---
+print("--- 2. LOADING LOCAL AUDIO FROM ASSETS FOLDER ---")
+assets_dir = "assets"
+
+if not os.path.exists(assets_dir):
+    print(f"CRITICAL ERROR: '{assets_dir}' folder not found in repository.")
+    sys.exit(1)
+
+# Collect all mp3 files located in your local folder
+audio_files = [f for f in os.listdir(assets_dir) if f.endswith('.mp3')]
+
+if not audio_files:
+    print(f"CRITICAL ERROR: No .mp3 files found inside the '{assets_dir}' folder.")
+    sys.exit(1)
+
+# Pick a completely random track instantly, with no network delay!
+random_audio = random.choice(audio_files)
+AUDIO_FILE = os.path.join(assets_dir, random_audio)
+print(f"SUCCESS: Selected local audio track -> {random_audio}")
 
 # --- 4. RENDER MOVING VIDEOS (HIGH BITRATE PAN & ZOOM) ---
 print("--- 3. RENDERING SHARP MOVING VIDEOS ---")
@@ -98,7 +91,7 @@ def prepare_audio(a_clip, target_dur):
 print(f"Rendering horizontal_short.mp4 ({HORIZONTAL_DURATION}s)...")
 def make_horiz_frame(t):
     p = t / HORIZONTAL_DURATION  
-    zoom = 1.0 + 0.10 * p        # Subtler zoom preserves maximum image quality
+    zoom = 1.0 + 0.10 * p
     crop_w = orig_w / zoom
     crop_h = orig_h / zoom
     x1 = (orig_w - crop_w) * p * 0.5
@@ -110,7 +103,7 @@ def make_horiz_frame(t):
 horiz_video = VideoClip(make_horiz_frame, duration=HORIZONTAL_DURATION)
 horiz_audio = prepare_audio(audio_clip, HORIZONTAL_DURATION)
 horiz_final = horiz_video.with_audio(horiz_audio)
-# Added bitrate="8000k" to FORCE high quality!
+# Enforcing the 8000k bitrate so the final export stays perfectly sharp!
 horiz_final.write_videofile("horizontal_short.mp4", fps=24, codec="libx264", audio_codec="aac", bitrate="8000k")
 
 # Vertical Rendering
@@ -136,7 +129,7 @@ def make_vert_frame(t):
 vert_video = VideoClip(make_vert_frame, duration=VERTICAL_DURATION)
 vert_audio = prepare_audio(audio_clip, VERTICAL_DURATION)
 vert_final = vert_video.with_audio(vert_audio)
-# Added bitrate="8000k" to FORCE high quality!
+# Enforcing the 8000k bitrate so the final export stays perfectly sharp!
 vert_final.write_videofile("vertical_short.mp4", fps=24, codec="libx264", audio_codec="aac", bitrate="8000k")
 
-print("SUCCESS! High-Def, magical Cozy Cafe videos generated!")
+print("SUCCESS! High-Def, magical Cozy Cafe videos generated using local assets!")
