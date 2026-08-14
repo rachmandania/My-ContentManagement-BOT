@@ -9,10 +9,10 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
@@ -23,17 +23,15 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
-          pip install moviepy requests google-api-python-client google-auth-oauthlib google-auth-httplib2 google-genai
-          
+          pip install moviepy requests google-api-python-client google-auth-oauthlib google-auth-httplib2
+
       - name: Notify Discord (Start)
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: python discord_notify.py start
 
       - name: Run Video Generator
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+        # No external image/audio API keys needed anymore since we use local assets!
         run: python main.py 2> >(tee error.log >&2)
 
       - name: Notify Discord (Success)
@@ -41,6 +39,18 @@ jobs:
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: python discord_notify.py success
+
+      - name: Run YouTube Upload
+        if: success()
+        env:
+          YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
+        run: python youtube_upload.py
+
+      - name: Notify Discord (Uploaded)
+        if: success()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python discord_notify.py uploaded
 
       - name: Notify Discord (Error)
         if: failure()
