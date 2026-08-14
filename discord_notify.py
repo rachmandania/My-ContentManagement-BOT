@@ -12,9 +12,9 @@ if not discord_webhook:
 command = sys.argv[1] if len(sys.argv) > 1 else "start"
 
 if command == "start":
-    requests.post(discord_webhook, json={"content": "⏳ **Workflow Started:** The automated nature video factory is now running!"})
+    requests.post(discord_webhook, json={"content": "⏳ **Workflow Started:** The video factory is now running."})
     print("Start notification sent.")
-
+    
 elif command == "success":
     # Because HD videos exceed Discord's 25MB webhook limit, we send a text notification instead
     success_message = (
