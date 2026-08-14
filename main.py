@@ -15,13 +15,18 @@ HORIZONTAL_DURATION = 30
 VERTICAL_DURATION = 15
 
 # --- 2. GENERATE STABLE DIFFUSION IMAGE (FREE API) ---
-print("--- 1. GENERATING COZY CAFE IMAGE (STABLE DIFFUSION) ---")
+print("--- 1. GENERATING COZY FANTASY CAVE IMAGE (STABLE DIFFUSION) ---")
 IMAGE_FILE = "background.jpg"
 
-image_prompt = "lofi anime style, cozy cafe interior at rainy night, warm ambient lighting, aesthetic retro, highly detailed, 4k resolution"
+image_prompt = (
+    "A breathtaking digital painting of a cozy, calm, and warm fantasy cave interior, "
+    "glowing bioluminescent crystals and glowing magical flora illuminating warm stone walls, "
+    "a tranquil crystal-clear underground stream, floating fireflies, cozy warm ambient light, "
+    "lush moss, vibrant flowers, masterpiece, 8k resolution, cinematic lighting, magical fantasy aesthetic"
+)
 encoded_prompt = requests.utils.quote(image_prompt)
 
-# Pollinations API runs Stable Diffusion / Flux entirely for free with no keys required
+# Pollinations API runs Stable Diffusion / Flux entirely for free
 image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1920&height=1080&nologo=true"
 
 try:
@@ -29,13 +34,13 @@ try:
     if img_data.status_code == 200:
         with open(IMAGE_FILE, "wb") as f:
             f.write(img_data.content)
-        print("SUCCESS: Stable Diffusion Image generated and saved!")
+        print("SUCCESS: Fantasy Cave Image generated and saved!")
     else:
         raise Exception("Failed to fetch image.")
 except Exception as e:
     print(f"CRITICAL ERROR generating image: {e}")
     sys.exit(1)
-
+    
 # --- 3. DOWNLOAD CALM JAZZ / CLASSIC AUDIO (DIRECT LINKS) ---
 print("--- 2. FETCHING RELAXING JAZZ / CLASSIC MUSIC ---")
 AUDIO_FILE = "cafe_music.mp3"
