@@ -33,6 +33,7 @@ jobs:
       - name: Run Video Generator
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
         run: python main.py 2> >(tee error.log >&2)
 
       - name: Notify Discord (Success)
