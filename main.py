@@ -3,9 +3,7 @@ import time
 import random
 import requests
 import sys
-import numpy as np
-from PIL import Image
-from moviepy import VideoClip, AudioFileClip, concatenate_audioclips
+from moviepy import ImageClip, AudioFileClip, concatenate_audioclips
 
 # --- 1. SETTINGS & DURATIONS ---
 HORIZONTAL_DURATION = 30  # 30 seconds for testing
@@ -26,6 +24,7 @@ chosen_prompt = (
 encoded_prompt = requests.utils.quote(chosen_prompt)
 random_seed = random.randint(1, 999999)
 
+# Generating directly at 1920x1080 so no resizing is needed later!
 image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1920&height=1080&nologo=true&seed={random_seed}&model=flux"
 print(f"Prompt: '{chosen_prompt}' (Seed: {random_seed})")
 
@@ -61,23 +60,22 @@ if not os.path.exists(assets_dir):
     print(f"CRITICAL ERROR: '{assets_dir}' folder not found in repository.")
     sys.exit(1)
 
-# Collect all mp3 files located in your local folder
 audio_files = [f for f in os.listdir(assets_dir) if f.endswith('.mp3')]
 
 if not audio_files:
     print(f"CRITICAL ERROR: No .mp3 files found inside the '{assets_dir}' folder.")
     sys.exit(1)
 
-# Pick a completely random track instantly, with no network delay!
 random_audio = random.choice(audio_files)
 AUDIO_FILE = os.path.join(assets_dir, random_audio)
 print(f"SUCCESS: Selected local audio track -> {random_audio}")
 
-# --- 4. RENDER MOVING VIDEOS (HIGH BITRATE PAN & ZOOM) ---
-print("--- 3. RENDERING SHARP MOVING VIDEOS ---")
+# --- 4. RENDER STATIC VIDEOS (MAXIMUM SHARPNESS) ---
+print("--- 3. RENDERING SHARP STATIC VIDEOS ---")
+
+# Load the crystal clear static image directly
+base_clip = ImageClip(IMAGE_FILE)
 audio_clip = AudioFileClip(AUDIO_FILE)
-base_pil = Image.open(IMAGE_FILE)
-orig_w, orig_h = base_pil.size
 
 def prepare_audio(a_clip, target_dur):
     if a_clip.duration < target_dur:
@@ -89,47 +87,25 @@ def prepare_audio(a_clip, target_dur):
 
 # Horizontal Rendering
 print(f"Rendering horizontal_short.mp4 ({HORIZONTAL_DURATION}s)...")
-def make_horiz_frame(t):
-    p = t / HORIZONTAL_DURATION  
-    zoom = 1.0 + 0.10 * p
-    crop_w = orig_w / zoom
-    crop_h = orig_h / zoom
-    x1 = (orig_w - crop_w) * p * 0.5
-    y1 = (orig_h - crop_h) * p * 0.5
-    cropped = base_pil.crop((x1, y1, x1 + crop_w, y1 + crop_h))
-    resized = cropped.resize((1920, 1080), Image.Resampling.LANCZOS)
-    return np.array(resized)
-
-horiz_video = VideoClip(make_horiz_frame, duration=HORIZONTAL_DURATION)
 horiz_audio = prepare_audio(audio_clip, HORIZONTAL_DURATION)
-horiz_final = horiz_video.with_audio(horiz_audio)
+horiz_final = base_clip.with_duration(HORIZONTAL_DURATION).with_audio(horiz_audio)
 # Enforcing the 8000k bitrate so the final export stays perfectly sharp!
 horiz_final.write_videofile("horizontal_short.mp4", fps=24, codec="libx264", audio_codec="aac", bitrate="8000k")
 
 # Vertical Rendering
 print(f"Rendering vertical_short.mp4 ({VERTICAL_DURATION}s)...")
-target_v_w = int(orig_h * 9 / 16)
-target_v_h = orig_h
+w, h = base_clip.size
+target_v_w = int(h * 9 / 16)
+target_v_h = h
 
 if target_v_w % 2 != 0: target_v_w -= 1
 if target_v_h % 2 != 0: target_v_h -= 1
 
-def make_vert_frame(t):
-    p = t / VERTICAL_DURATION
-    zoom = 1.0 + 0.10 * p
-    base_x1 = (orig_w - target_v_w) / 2
-    crop_w = target_v_w / zoom
-    crop_h = target_v_h / zoom
-    x1 = base_x1 + (target_v_w - crop_w) * p * 0.5
-    y1 = (target_v_h - crop_h) * p * 0.5
-    cropped = base_pil.crop((x1, y1, x1 + crop_w, y1 + crop_h))
-    resized = cropped.resize((1080, 1920), Image.Resampling.LANCZOS)
-    return np.array(resized)
-
-vert_video = VideoClip(make_vert_frame, duration=VERTICAL_DURATION)
+# Statically crop the center of the image for the vertical short
+vert_clip = base_clip.cropped(width=target_v_w, height=target_v_h, x_center=w/2, y_center=h/2)
 vert_audio = prepare_audio(audio_clip, VERTICAL_DURATION)
-vert_final = vert_video.with_audio(vert_audio)
+vert_final = vert_clip.with_duration(VERTICAL_DURATION).with_audio(vert_audio)
 # Enforcing the 8000k bitrate so the final export stays perfectly sharp!
 vert_final.write_videofile("vertical_short.mp4", fps=24, codec="libx264", audio_codec="aac", bitrate="8000k")
 
-print("SUCCESS! High-Def, magical Cozy Cafe videos generated using local assets!")
+print("SUCCESS! Razor-sharp static videos generated using local assets!")
