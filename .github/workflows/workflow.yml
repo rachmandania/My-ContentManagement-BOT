@@ -32,8 +32,7 @@ jobs:
 
       - name: Run Video Generator
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: python main.py 2> >(tee error.log >&2)
 
       - name: Notify Discord (Success)
