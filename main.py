@@ -15,9 +15,6 @@ IMAGE_FILE = "background.jpg"
 
 chosen_prompt = (
     "Super quality Hyper reallistic Cozy Stunning cafe, magical interior, "
-    "warm glowing lanterns, a steaming cup of coffee on a wooden table. "
-    "Large open windows revealing a spectacular fantasy landscape with glowing bioluminescent plants, "
-    "vibrant purple and pink sunset, crystal clear stream, glowing fireflies, lush colorful flowers. "
     "Masterpiece, ethereal cinematic lighting, 8k resolution, ultra-sharp."
 )
 
