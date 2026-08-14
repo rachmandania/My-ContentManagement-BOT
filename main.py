@@ -9,11 +9,10 @@ from moviepy import ImageClip, AudioFileClip, concatenate_audioclips
 HORIZONTAL_DURATION = 30  
 VERTICAL_DURATION = 15    
 
-# --- 2. GENERATE MAGICAL COZY CAFE IMAGE ---
-print("--- 1. GENERATING HIGH-DEF CAFE IMAGE ---")
+# --- 2. GENERATE MAGICAL COZY CAFE IMAGE (WITH PROMPT ENHANCEMENT) ---
+print("--- 1. GENERATING HIGH-DEF MAGICAL CAFE IMAGE ---")
 IMAGE_FILE = "background.jpg"
 
-# Stripped down to YOUR exact prompt. No extra fluff.
 chosen_prompt = "Super quality Hyper realistic Cozy Stunning cafe in 4k size"
 
 encoded_prompt = requests.utils.quote(chosen_prompt)
@@ -26,12 +25,12 @@ image_downloaded = False
 for attempt in range(5):
     print(f"Attempt {attempt + 1}: Contacting AI server...")
     
-    # Attempts 1-3 FORCE the premium FLUX model for razor-sharp realism.
     current_model = "&model=flux" if attempt < 3 else ""
     if attempt == 3:
         print("FLUX model servers are busy. Switching to standard high-speed AI model...")
         
-    image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1920&height=1080&nologo=true&seed={random_seed}{current_model}"
+    # Added &enhance=true to trigger automatic LLM prompt expansion for extra detail
+    image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1920&height=1080&nologo=true&enhance=true&seed={random_seed}{current_model}"
     
     try:
         img_data = requests.get(image_url, timeout=60)
@@ -39,7 +38,7 @@ for attempt in range(5):
         if img_data.status_code == 200 and len(img_data.content) > 10000:
             with open(IMAGE_FILE, "wb") as f:
                 f.write(img_data.content)
-            print("SUCCESS: High-Def Cafe image generated and saved!")
+            print("SUCCESS: Enhanced High-Def Cafe image generated and saved!")
             image_downloaded = True
             break
         else:
