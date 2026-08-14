@@ -11,30 +11,32 @@ from moviepy import VideoClip, AudioFileClip, concatenate_audioclips
 HORIZONTAL_DURATION = 30  # 30 seconds for testing
 VERTICAL_DURATION = 15    # 15 seconds for testing
 
-# --- 2. GENERATE SIMPLIFIED COZY CAFE IMAGE (NEW EACH RUN) ---
-print("--- 1. GENERATING UNIQUE COZY CAFE IMAGE ---")
+# --- 2. GENERATE ULTRA-SHARP COZY CAFE IMAGE ---
+print("--- 1. GENERATING UNIQUE 4K COZY CAFE IMAGE ---")
 IMAGE_FILE = "background.jpg"
 
-# Randomized prompts to guarantee a different cafe scene every run
+# Dynamic adjectives ensure the prompt is completely unique every run
+adjectives = ["breathtaking", "hyper-detailed", "crisp", "ultra-sharp", "photorealistic", "highly detailed"]
+chosen_adj = random.choice(adjectives)
+
 CAFE_PROMPTS = [
-    "digital painting of a cozy cafe interior with warm ambient lighting, steaming coffee on a wooden table, sharp focus, 4k resolution",
-    "warm digital painting of a peaceful coffee shop with large windows and cozy wooden seating, sharp focus, 4k resolution",
-    "lofi aesthetic painting of a warm inviting cafe at dusk, soft golden light, sharp focus, 4k resolution",
-    "digital art of a quiet cozy cafe room with indoor plants and warm table lamps, highly detailed, sharp focus"
+    f"A {chosen_adj} digital painting of a cozy cafe interior, warm ambient lighting, steaming coffee on a wooden table, ultra-sharp focus, 8k resolution",
+    f"A {chosen_adj} digital art of a peaceful coffee shop, large windows, cozy wooden seating, ultra-sharp focus, 8k resolution",
+    f"Lofi aesthetic cafe at dusk, {chosen_adj}, soft golden light, sharp focus, 8k crisp resolution",
+    f"Hyper-realistic cozy cafe room with indoor plants, warm table lamps, sharp focus, {chosen_adj}, intricate details, 8k resolution"
 ]
 
 chosen_prompt = random.choice(CAFE_PROMPTS)
 encoded_prompt = requests.utils.quote(chosen_prompt)
-
-# Generate a random seed so Pollinations AI NEVER serves a cached duplicate
 random_seed = random.randint(1, 999999)
-image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=3840&height=2160&nologo=true&seed={random_seed}"
 
+# Generate at massive 4K resolution (3840x2160)
+image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=3840&height=2160&nologo=true&seed={random_seed}"
 print(f"Prompt: '{chosen_prompt}' (Seed: {random_seed})")
 
 try:
-    img_data = requests.get(image_url, timeout=30)
-    if img_data.status_code == 200 and len(img_data.content) > 10000:
+    img_data = requests.get(image_url, timeout=45)
+    if img_data.status_code == 200 and len(img_data.content) > 50000:
         with open(IMAGE_FILE, "wb") as f:
             f.write(img_data.content)
         print("SUCCESS: New 4K Cafe image generated and saved!")
@@ -44,13 +46,13 @@ except Exception as e:
     print(f"CRITICAL ERROR generating image: {e}")
     sys.exit(1)
 
-# --- 3. DOWNLOAD CALM AUDIO (TRUE RANDOM ALTERNATION) ---
+# --- 3. DOWNLOAD CALM AUDIO (6 DIRECT LINKS) ---
 print("--- 2. FETCHING RANDOM RELAXING MUSIC ---")
 AUDIO_FILE = "cafe_music.mp3"
 audio_headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
 audio_downloaded = False
 
-# 6 fast, reliable direct MP3 links across different styles
+# Your exact 6 guaranteed audio sources
 CALM_MUSIC_URLS = [
     "https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3", # Lofi Chillhop 1
     "https://cdn.pixabay.com/audio/2022/05/16/audio_b2879685ed.mp3", # Lofi Chillhop 2
@@ -60,13 +62,15 @@ CALM_MUSIC_URLS = [
     "https://archive.org/download/DebussyClairDeLune/Debussy%20-%20Clair%20de%20Lune.mp3" # Classical Piano
 ]
 
-# Shuffle playlist so attempt sequence is unpredictable
+# Shuffle the playlist so it picks a random track every single time
 random.shuffle(CALM_MUSIC_URLS)
 
-for track_url in CALM_MUSIC_URLS[:3]:
+for track_url in CALM_MUSIC_URLS:
     try:
-        print("Attempting audio download...")
-        audio_data = requests.get(track_url, headers=audio_headers, timeout=12, allow_redirects=True)
+        print(f"Attempting to download audio track...")
+        audio_data = requests.get(track_url, headers=audio_headers, timeout=15, allow_redirects=True)
+        
+        # Ensure it's a real audio file and not a blank webpage
         if audio_data.status_code == 200 and len(audio_data.content) > 50000:
             with open(AUDIO_FILE, "wb") as f:
                 f.write(audio_data.content)
@@ -74,22 +78,18 @@ for track_url in CALM_MUSIC_URLS[:3]:
             audio_downloaded = True
             break
     except Exception as e:
-        print(f"Track download failed ({e}), trying next track...")
+        print(f"Track download failed ({e}), trying next track in playlist...")
         time.sleep(1)
 
-# Randomized failsafe fallback if all primary attempts time out
 if not audio_downloaded:
-    print("Primary downloads timed out. Choosing randomized backup audio...")
-    fallback_url = random.choice(CALM_MUSIC_URLS)
-    audio_data = requests.get(fallback_url, headers=audio_headers, allow_redirects=True)
-    with open(AUDIO_FILE, "wb") as f:
-        f.write(audio_data.content)
+    print("CRITICAL ERROR: All 6 audio links failed to download.")
+    sys.exit(1)
 
 # --- 4. RENDER MOVING VIDEOS (PAN & ZOOM) ---
 print("--- 3. RENDERING SHARP MOVING VIDEOS ---")
 audio_clip = AudioFileClip(AUDIO_FILE)
 base_pil = Image.open(IMAGE_FILE)
-orig_w, orig_h = base_pil.size
+orig_w, orig_h = base_pil.size # 3840x2160 (4K)
 
 def prepare_audio(a_clip, target_dur):
     if a_clip.duration < target_dur:
@@ -109,6 +109,8 @@ def make_horiz_frame(t):
     x1 = (orig_w - crop_w) * p * 0.5
     y1 = (orig_h - crop_h) * p * 0.5
     cropped = base_pil.crop((x1, y1, x1 + crop_w, y1 + crop_h))
+    
+    # Downscale to 1080p to retain razor sharp details
     resized = cropped.resize((1920, 1080), Image.Resampling.LANCZOS)
     return np.array(resized)
 
@@ -142,4 +144,4 @@ vert_audio = prepare_audio(audio_clip, VERTICAL_DURATION)
 vert_final = vert_video.with_audio(vert_audio)
 vert_final.write_videofile("vertical_short.mp4", fps=24, codec="libx264", audio_codec="aac")
 
-print("SUCCESS! Clean Cozy Cafe videos generated successfully!")
+print("SUCCESS! Clean, sharp, and randomized Cozy Cafe videos generated!")
