@@ -1,7 +1,5 @@
 import os
-import time
 import random
-import requests
 import sys
 from moviepy import ImageClip, AudioFileClip, concatenate_audioclips
 
@@ -9,69 +7,41 @@ from moviepy import ImageClip, AudioFileClip, concatenate_audioclips
 HORIZONTAL_DURATION = 30  
 VERTICAL_DURATION = 15    
 
-# --- 2. GENERATE MAGICAL COZY CAFE IMAGE (WITH PROMPT ENHANCEMENT) ---
-print("--- 1. GENERATING HIGH-DEF MAGICAL CAFE IMAGE ---")
-IMAGE_FILE = "background.jpg"
+IMAGE_DIR = "assets/images"
+AUDIO_DIR = "assets/audio"
 
-chosen_prompt = "Super quality Hyper realistic Cozy Stunning cafe in 4k size"
-
-encoded_prompt = requests.utils.quote(chosen_prompt)
-random_seed = random.randint(1, 999999)
-print(f"Prompt: '{chosen_prompt}' (Seed: {random_seed})")
-
-image_downloaded = False
-
-# Give the AI up to 5 attempts with a smart fallback system
-for attempt in range(5):
-    print(f"Attempt {attempt + 1}: Contacting AI server...")
-    
-    current_model = "&model=flux" if attempt < 3 else ""
-    if attempt == 3:
-        print("FLUX model servers are busy. Switching to standard high-speed AI model...")
-        
-    # Added &enhance=true to trigger automatic LLM prompt expansion for extra detail
-    image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1920&height=1080&nologo=true&enhance=true&seed={random_seed}{current_model}"
-    
-    try:
-        img_data = requests.get(image_url, timeout=60)
-        
-        if img_data.status_code == 200 and len(img_data.content) > 10000:
-            with open(IMAGE_FILE, "wb") as f:
-                f.write(img_data.content)
-            print("SUCCESS: Enhanced High-Def Cafe image generated and saved!")
-            image_downloaded = True
-            break
-        else:
-            print(f"Server returned status {img_data.status_code}. Retrying in 5 seconds...")
-            time.sleep(5)
-    except Exception as e:
-        print(f"Connection error: {e}. Retrying in 5 seconds...")
-        time.sleep(5)
-
-if not image_downloaded:
-    print("CRITICAL ERROR: AI Image generator servers failed after 5 attempts.")
+if not os.path.exists(IMAGE_DIR):
+    print(f"CRITICAL ERROR: '{IMAGE_DIR}' folder not found in repository.")
     sys.exit(1)
 
-# --- 3. LOAD RANDOM LOCAL AUDIO ---
-print("--- 2. LOADING LOCAL AUDIO FROM ASSETS FOLDER ---")
-assets_dir = "assets"
-
-if not os.path.exists(assets_dir):
-    print(f"CRITICAL ERROR: '{assets_dir}' folder not found in repository.")
+if not os.path.exists(AUDIO_DIR):
+    print(f"CRITICAL ERROR: '{AUDIO_DIR}' folder not found in repository.")
     sys.exit(1)
 
-audio_files = [f for f in os.listdir(assets_dir) if f.endswith('.mp3')]
+# --- 2. SELECT RANDOM LOCAL IMAGE ---
+image_files = [f for f in os.listdir(IMAGE_DIR) if f.endswith(('.jpg', '.jpeg', '.png'))]
+
+if not image_files:
+    print(f"CRITICAL ERROR: No image files found inside the '{IMAGE_DIR}' folder.")
+    sys.exit(1)
+
+random_image = random.choice(image_files)
+IMAGE_FILE = os.path.join(IMAGE_DIR, random_image)
+print(f"SUCCESS: Selected local background image -> {random_image}")
+
+# --- 3. SELECT RANDOM LOCAL AUDIO ---
+audio_files = [f for f in os.listdir(AUDIO_DIR) if f.endswith('.mp3')]
 
 if not audio_files:
-    print(f"CRITICAL ERROR: No .mp3 files found inside the '{assets_dir}' folder.")
+    print(f"CRITICAL ERROR: No .mp3 files found inside the '{AUDIO_DIR}' folder.")
     sys.exit(1)
 
 random_audio = random.choice(audio_files)
-AUDIO_FILE = os.path.join(assets_dir, random_audio)
+AUDIO_FILE = os.path.join(AUDIO_DIR, random_audio)
 print(f"SUCCESS: Selected local audio track -> {random_audio}")
 
-# --- 4. RENDER STATIC VIDEOS (MAXIMUM SHARPNESS) ---
-print("--- 3. RENDERING SHARP STATIC VIDEOS ---")
+# --- 4. RENDER SHARP STATIC VIDEOS ---
+print("--- RENDERING SHARP STATIC VIDEOS ---")
 base_clip = ImageClip(IMAGE_FILE)
 audio_clip = AudioFileClip(AUDIO_FILE)
 
@@ -103,4 +73,4 @@ vert_audio = prepare_audio(audio_clip, VERTICAL_DURATION)
 vert_final = vert_clip.with_duration(VERTICAL_DURATION).with_audio(vert_audio)
 vert_final.write_videofile("vertical_short.mp4", fps=24, codec="libx264", audio_codec="aac", bitrate="8000k")
 
-print("SUCCESS! Razor-sharp static videos generated using local assets!")
+print("SUCCESS! Razor-sharp videos generated entirely from your organized local assets!")
