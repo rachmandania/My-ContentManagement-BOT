@@ -10,13 +10,11 @@ HORIZONTAL_DURATION = 30
 VERTICAL_DURATION = 15    
 
 # --- 2. GENERATE MAGICAL COZY CAFE IMAGE ---
-print("--- 1. GENERATING HIGH-DEF MAGICAL CAFE IMAGE ---")
+print("--- 1. GENERATING HIGH-DEF CAFE IMAGE ---")
 IMAGE_FILE = "background.jpg"
 
-chosen_prompt = (
-    "Super quality Hyper reallistic Cozy Stunning cafe, magical interior, "
-    "Masterpiece, ethereal cinematic lighting, 8k resolution, ultra-sharp."
-)
+# Stripped down to YOUR exact prompt. No extra fluff.
+chosen_prompt = "Super quality Hyper realistic Cozy Stunning cafe in 4k size"
 
 encoded_prompt = requests.utils.quote(chosen_prompt)
 random_seed = random.randint(1, 999999)
@@ -28,7 +26,7 @@ image_downloaded = False
 for attempt in range(5):
     print(f"Attempt {attempt + 1}: Contacting AI server...")
     
-    # Attempts 1-3 use the heavy FLUX model. Attempts 4-5 fallback to standard high-speed model.
+    # Attempts 1-3 FORCE the premium FLUX model for razor-sharp realism.
     current_model = "&model=flux" if attempt < 3 else ""
     if attempt == 3:
         print("FLUX model servers are busy. Switching to standard high-speed AI model...")
@@ -36,25 +34,23 @@ for attempt in range(5):
     image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1920&height=1080&nologo=true&seed={random_seed}{current_model}"
     
     try:
-        # Increased timeout to 60 seconds to give the AI plenty of time to paint
         img_data = requests.get(image_url, timeout=60)
         
-        # Lowered size restriction to 10KB (10000) to account for extreme WebP compression
         if img_data.status_code == 200 and len(img_data.content) > 10000:
             with open(IMAGE_FILE, "wb") as f:
                 f.write(img_data.content)
-            print("SUCCESS: High-Def Magical Cafe image generated and saved!")
+            print("SUCCESS: High-Def Cafe image generated and saved!")
             image_downloaded = True
             break
         else:
-            print(f"Server returned status {img_data.status_code} with size {len(img_data.content)} bytes. Retrying in 5 seconds...")
+            print(f"Server returned status {img_data.status_code}. Retrying in 5 seconds...")
             time.sleep(5)
     except Exception as e:
-        print(f"Connection timeout/error: {e}. Retrying in 5 seconds...")
+        print(f"Connection error: {e}. Retrying in 5 seconds...")
         time.sleep(5)
 
 if not image_downloaded:
-    print("CRITICAL ERROR: AI Image generator servers are completely down after 5 attempts.")
+    print("CRITICAL ERROR: AI Image generator servers failed after 5 attempts.")
     sys.exit(1)
 
 # --- 3. LOAD RANDOM LOCAL AUDIO ---
