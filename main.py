@@ -6,10 +6,10 @@ import sys
 from moviepy import ImageClip, AudioFileClip, concatenate_audioclips
 
 # --- 1. SETTINGS & DURATIONS ---
-HORIZONTAL_DURATION = 30  # 30 seconds for testing
-VERTICAL_DURATION = 15    # 15 seconds for testing
+HORIZONTAL_DURATION = 30  
+VERTICAL_DURATION = 15    
 
-# --- 2. GENERATE MAGICAL COZY CAFE IMAGE (FLUX MODEL) ---
+# --- 2. GENERATE MAGICAL COZY CAFE IMAGE ---
 print("--- 1. GENERATING HIGH-DEF MAGICAL CAFE IMAGE ---")
 IMAGE_FILE = "background.jpg"
 
@@ -23,33 +23,41 @@ chosen_prompt = (
 
 encoded_prompt = requests.utils.quote(chosen_prompt)
 random_seed = random.randint(1, 999999)
-
-# Generating directly at 1920x1080 so no resizing is needed later!
-image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1920&height=1080&nologo=true&seed={random_seed}&model=flux"
 print(f"Prompt: '{chosen_prompt}' (Seed: {random_seed})")
 
 image_downloaded = False
 
-# Give the AI 3 attempts to generate the image in case the server is busy
-for attempt in range(3):
+# Give the AI up to 5 attempts with a smart fallback system
+for attempt in range(5):
     print(f"Attempt {attempt + 1}: Contacting AI server...")
+    
+    # Attempts 1-3 use the heavy FLUX model. Attempts 4-5 fallback to standard high-speed model.
+    current_model = "&model=flux" if attempt < 3 else ""
+    if attempt == 3:
+        print("FLUX model servers are busy. Switching to standard high-speed AI model...")
+        
+    image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1920&height=1080&nologo=true&seed={random_seed}{current_model}"
+    
     try:
-        img_data = requests.get(image_url, timeout=45)
-        if img_data.status_code == 200 and len(img_data.content) > 50000:
+        # Increased timeout to 60 seconds to give the AI plenty of time to paint
+        img_data = requests.get(image_url, timeout=60)
+        
+        # Lowered size restriction to 10KB (10000) to account for extreme WebP compression
+        if img_data.status_code == 200 and len(img_data.content) > 10000:
             with open(IMAGE_FILE, "wb") as f:
                 f.write(img_data.content)
             print("SUCCESS: High-Def Magical Cafe image generated and saved!")
             image_downloaded = True
             break
         else:
-            print("Server returned empty data. Retrying in 5 seconds...")
+            print(f"Server returned status {img_data.status_code} with size {len(img_data.content)} bytes. Retrying in 5 seconds...")
             time.sleep(5)
     except Exception as e:
-        print(f"Connection timeout: {e}. Retrying in 5 seconds...")
+        print(f"Connection timeout/error: {e}. Retrying in 5 seconds...")
         time.sleep(5)
 
 if not image_downloaded:
-    print("CRITICAL ERROR: AI Image generator failed after 3 attempts.")
+    print("CRITICAL ERROR: AI Image generator servers are completely down after 5 attempts.")
     sys.exit(1)
 
 # --- 3. LOAD RANDOM LOCAL AUDIO ---
@@ -72,8 +80,6 @@ print(f"SUCCESS: Selected local audio track -> {random_audio}")
 
 # --- 4. RENDER STATIC VIDEOS (MAXIMUM SHARPNESS) ---
 print("--- 3. RENDERING SHARP STATIC VIDEOS ---")
-
-# Load the crystal clear static image directly
 base_clip = ImageClip(IMAGE_FILE)
 audio_clip = AudioFileClip(AUDIO_FILE)
 
@@ -89,7 +95,6 @@ def prepare_audio(a_clip, target_dur):
 print(f"Rendering horizontal_short.mp4 ({HORIZONTAL_DURATION}s)...")
 horiz_audio = prepare_audio(audio_clip, HORIZONTAL_DURATION)
 horiz_final = base_clip.with_duration(HORIZONTAL_DURATION).with_audio(horiz_audio)
-# Enforcing the 8000k bitrate so the final export stays perfectly sharp!
 horiz_final.write_videofile("horizontal_short.mp4", fps=24, codec="libx264", audio_codec="aac", bitrate="8000k")
 
 # Vertical Rendering
@@ -101,11 +106,9 @@ target_v_h = h
 if target_v_w % 2 != 0: target_v_w -= 1
 if target_v_h % 2 != 0: target_v_h -= 1
 
-# Statically crop the center of the image for the vertical short
 vert_clip = base_clip.cropped(width=target_v_w, height=target_v_h, x_center=w/2, y_center=h/2)
 vert_audio = prepare_audio(audio_clip, VERTICAL_DURATION)
 vert_final = vert_clip.with_duration(VERTICAL_DURATION).with_audio(vert_audio)
-# Enforcing the 8000k bitrate so the final export stays perfectly sharp!
 vert_final.write_videofile("vertical_short.mp4", fps=24, codec="libx264", audio_codec="aac", bitrate="8000k")
 
 print("SUCCESS! Razor-sharp static videos generated using local assets!")
