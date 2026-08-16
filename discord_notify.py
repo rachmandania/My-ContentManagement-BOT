@@ -29,7 +29,7 @@ elif command == "success":
     success_message = (
         f"✅ **Video Generation Complete!**\n\n"
         f"🎮 **Selected Game:** {game_name}\n"
-        f"🎥 Both Horizontal (10m) and Vertical (15s) native clips are rendered and ready for upload."
+        f"🎥 Both Horizontal (10 minute) and Vertical (2 minute 50 second) native clips are rendered and ready for upload."
     )
     payload = {"content": success_message}
     requests.post(discord_webhook, json=payload)
