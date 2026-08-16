@@ -97,13 +97,13 @@ def prepare_audio(a_clip, target_dur):
 print(f"Rendering horizontal_short.mp4 ({HORIZONTAL_DURATION}s)...")
 horiz_audio = prepare_audio(audio_clip, HORIZONTAL_DURATION)
 horiz_final = horiz_clip_base.with_duration(HORIZONTAL_DURATION).with_audio(horiz_audio)
-horiz_final.write_videofile("horizontal_short.mp4", fps=24, codec="libx264", audio_codec="aac", bitrate="8000k")
+horiz_final.write_videofile("horizontal_short.mp4", fps=24, codec="libx264", audio_codec="libmp3lame", bitrate="8000k")
 
 # Render Vertical Video (9:16 - Native Asset)
 print(f"Rendering vertical_short.mp4 ({VERTICAL_DURATION}s)...")
 vert_audio = prepare_audio(audio_clip, VERTICAL_DURATION)
 vert_final = vert_clip_base.with_duration(VERTICAL_DURATION).with_audio(vert_audio)
-vert_final.write_videofile("vertical_short.mp4", fps=24, codec="libx264", audio_codec="aac", bitrate="8000k")
+vert_final.write_videofile("vertical_short.mp4", fps=24, codec="libx264", audio_codec="libmp3lame", bitrate="8000k")
 
 # --- 4. TOP 3 GAME TAGS MAPPING & METADATA SAVE ---
 GAME_TAG_MAP = {
