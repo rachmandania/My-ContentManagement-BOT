@@ -6,7 +6,7 @@ from moviepy import ImageClip, AudioFileClip, concatenate_audioclips
 
 # --- 1. SETTINGS & DURATIONS ---
 HORIZONTAL_DURATION = 600  # 10 minutes (set to 30 for testing)
-VERTICAL_DURATION = 15     # 15 seconds
+VERTICAL_DURATION = 170     # 2 minutes 50 sec
 
 ASSETS_DIR = "assets"
 
