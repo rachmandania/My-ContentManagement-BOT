@@ -51,7 +51,7 @@ jobs:
         if: success()
         env:
           TIKTOK_ACCESS_TOKEN: ${{ secrets.TIKTOK_ACCESS_TOKEN }}
-        run: python tiktok_upload.py "vertical_short.mp4" "Daily Automated Video #fyp #shorts "
+        run: python tiktok_upload.py "vertical_short.mp4" "Daily Automated Video"
 
       - name: Notify Discord (Uploaded)
         if: success()
