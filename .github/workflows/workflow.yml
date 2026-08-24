@@ -1,4 +1,4 @@
-name: Generate YouTube Video
+name: Generate Video
 
 on:
    schedule:
