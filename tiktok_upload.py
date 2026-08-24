@@ -4,7 +4,6 @@ import json
 import sys
 
 def upload_to_tiktok(video_path, title):
-    # 1. Grab the secure token from GitHub Secrets
     access_token = os.environ.get('TIKTOK_ACCESS_TOKEN')
     
     if not access_token:
@@ -13,15 +12,15 @@ def upload_to_tiktok(video_path, title):
 
     print(f"🚀 Initializing TikTok upload for: {video_path}")
     
-    # 2. Setup the API request
+    file_size = os.path.getsize(video_path)
+    
+    # 1. Initialize Upload Request
     url = "https://open.tiktokapis.com/v2/post/publish/video/init/"
     headers = {
         "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json; charset=UTF-8"
     }
     
-    # 3. Configure the video details (SELF_ONLY is required for Sandbox mode)
-    file_size = os.path.getsize(video_path)
     init_data = {
         "post_info": {
             "title": title,
@@ -38,26 +37,29 @@ def upload_to_tiktok(video_path, title):
         }
     }
     
-    # 4. Ask TikTok for permission to upload
     response = requests.post(url, headers=headers, data=json.dumps(init_data))
     
     if response.status_code == 200:
         upload_data = response.json()
         print("✅ TikTok granted upload access!")
         
-        # 5. Push the actual video file to the URL TikTok provided
         upload_url = upload_data['data']['upload_url']
         print("Uploading video file bytes...")
         
-        with open(video_path, 'rb') as f:
-            video_data = f.read()
+        # 2. Upload Bytes using Content-Range header required by TikTok API v2
+        with open(video_path, 'rb') as video_file:
+            upload_headers = {
+                "Content-Type": "video/mp4",
+                "Content-Length": str(file_size),
+                "Content-Range": f"bytes 0-{file_size - 1}/{file_size}"
+            }
             
-        upload_response = requests.put(
-            upload_url, 
-            headers={"Content-Type": "video/mp4", "Content-Length": str(file_size)}, 
-            data=video_data
-        )
-        
+            upload_response = requests.put(
+                upload_url, 
+                headers=upload_headers, 
+                data=video_file
+            )
+            
         if upload_response.status_code in (200, 201):
             print("✅ SUCCESS: Video successfully uploaded to your TikTok Drafts!")
         else:
@@ -69,7 +71,6 @@ def upload_to_tiktok(video_path, title):
         print(response.text)
 
 if __name__ == "__main__":
-    # We will pass the video file name and title directly from main.py or the workflow
     if len(sys.argv) < 3:
         print("Usage: python tiktok_upload.py <video_file_path> <title>")
         sys.exit(1)
