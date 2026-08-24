@@ -9,6 +9,6 @@
   - Making Video Generator, horizontal and vertical (Complete)
   - Auto upload the result (Complete)
   - run it 24/7 (Complete)
-  - Connect it to the youtube (complete)
-  - Connect it to the tiktok (In Progress)
+  - Connect it to the youtube (complete using official API KEY) 
+  - Connect it to the tiktok (In Progress Using official API KEY)
   - connect it to the my own Discord Channel (Complete)
