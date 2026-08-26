@@ -52,9 +52,8 @@ jobs:
         env:
           ZERNIO_API_KEY: ${{ secrets.ZERNIO_API_KEY }}
         run: |
-          TODAY=$(date +'%B %d, %Y')
-          python zernio_upload.py "vertical_short.mp4" "Daily Nature Escape - $TODAY #fyp #shorts"
-
+          python zernio_upload.py "vertical_short.mp4"
+          
       - name: Notify Discord (Uploaded)
         if: success()
         env:
