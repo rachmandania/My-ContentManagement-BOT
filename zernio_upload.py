@@ -22,7 +22,7 @@ def get_public_video_url(file_path):
 
 def get_tiktok_account_id(api_key):
     print("🔍 Fetching your connected TikTok account ID from Zernio...")
-    url = "https://zernio.com/api/v1/accounts"
+    url = "https://api.zernio.com/v1/accounts"
     headers = {"Authorization": f"Bearer {api_key}"}
     response = requests.get(url, headers=headers)
     
@@ -40,7 +40,6 @@ def get_tiktok_account_id(api_key):
                 return acc_id
                 
         print("❌ Error: No connected TikTok account found in your Zernio dashboard!")
-        print("👉 Please log into zernio.com and ensure your TikTok account is connected.")
         sys.exit(1)
     else:
         print(f"❌ Failed to fetch Zernio accounts. Status: {response.status_code}")
@@ -57,9 +56,9 @@ def upload_to_zernio(video_url, title):
     # 1. Use the new radar function to dynamically grab your ID
     account_id = get_tiktok_account_id(api_key)
 
-    # 2. Package the payload exactly how Zernio expects it
-    print("🚀 Sending video to Zernio for distribution...")
-    url = "https://zernio.com/api/v1/posts" 
+    # 2. Package the payload exactly how Zernio expects it, routing to Drafts
+    print("🚀 Sending video to Zernio for distribution (Draft Mode)...")
+    url = "https://api.zernio.com/v1/posts" 
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
@@ -76,14 +75,17 @@ def upload_to_zernio(video_url, title):
         "platforms": [
             {
                 "platform": "tiktok",
-                "accountId": account_id
+                "accountId": account_id,
+                "tiktokSettings": {
+                    "draft": True
+                }
             }
-        ],
-        "publishNow": True
+        ]
     }
     
     response = requests.post(url, headers=headers, json=payload)
     
+    # Accept 207 (Multi-Status) as a success since it signifies Zernio queued it
     if response.status_code in (200, 201, 207):
         print("✅ SUCCESS: Video successfully queued in Zernio!")
     else:
