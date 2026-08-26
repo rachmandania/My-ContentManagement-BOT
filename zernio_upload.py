@@ -7,9 +7,14 @@ def get_public_video_url(file_path):
     url = "https://catbox.moe/user/api.php"
     data = {"reqtype": "fileupload"}
     
+    # This header bypasses the bot filter by mimicking a real web browser
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+    
     with open(file_path, "rb") as f:
         files = {"fileToUpload": f}
-        response = requests.post(url, data=data, files=files)
+        response = requests.post(url, headers=headers, data=data, files=files)
         
     if response.status_code == 200:
         public_url = response.text.strip()
@@ -20,7 +25,6 @@ def get_public_video_url(file_path):
         sys.exit(1)
 
 def upload_to_zernio(video_url, title):
-    # Grab your secure key from GitHub Secrets
     api_key = os.environ.get('ZERNIO_API_KEY')
     
     if not api_key:
@@ -29,7 +33,6 @@ def upload_to_zernio(video_url, title):
 
     print("🚀 Sending video to Zernio for distribution...")
     
-    # Standard Zernio API endpoint for posting
     url = "https://api.zernio.com/v1/posts" 
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -63,8 +66,5 @@ if __name__ == "__main__":
     video_file = sys.argv[1]
     video_title = sys.argv[2]
     
-    # 1. Get the public link
     public_link = get_public_video_url(video_file)
-    
-    # 2. Send to Zernio
     upload_to_zernio(public_link, video_title)
