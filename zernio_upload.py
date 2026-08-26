@@ -1,6 +1,7 @@
 import os
 import sys
 import requests
+import json
 
 def get_public_video_url(file_path):
     print(f"🌍 Uploading {file_path} to temporary public host...")
@@ -46,7 +47,7 @@ def get_tiktok_account_id(api_key):
         print(response.text)
         sys.exit(1)
 
-def upload_to_zernio(video_url, title):
+def upload_to_zernio(video_url, caption):
     api_key = os.environ.get('ZERNIO_API_KEY')
     
     if not api_key:
@@ -65,7 +66,7 @@ def upload_to_zernio(video_url, title):
     }
     
     payload = {
-        "content": title,
+        "content": caption,
         "mediaItems": [
             {
                 "type": "video",
@@ -94,12 +95,43 @@ def upload_to_zernio(video_url, title):
         sys.exit(1)
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("Usage: python zernio_upload.py <video_file_path> <title>")
+    if len(sys.argv) < 2:
+        print("Usage: python zernio_upload.py <video_file_path>")
         sys.exit(1)
         
     video_file = sys.argv[1]
-    video_title = sys.argv[2]
     
+    # 1. Read the exact same metadata file used for YouTube
+    metadata_file = "video_metadata.json"
+    if not os.path.exists(metadata_file):
+        print(f"❌ CRITICAL ERROR: Metadata file {metadata_file} not found.")
+        sys.exit(1)
+
+    with open(metadata_file, "r", encoding="utf-8") as f:
+        meta = json.load(f)
+
+    game_name = meta.get("game_name", "Game Relaxation")
+    credits_text = meta.get("credits", "")
+
+    # 2. Keep the exact same tags for maximum reach
+    ALL_GAME_TAGS = [
+        "GenshinImpact", "Genshin", "HoYoverse",
+        "ArknightsEndfield", "Endfield", "Arknights",
+        "NevernessToEverness", "NTE", "HottaStudio"
+    ]
+    
+    combined_tags_vert = ALL_GAME_TAGS + ["shorts", "lofi", "relax", "fancontent", "fyp"]
+
+    # 3. Convert the Python list into a string of TikTok hashtags
+    hashtag_string = " ".join([f"#{tag}" for tag in combined_tags_vert])
+
+    # 4. Construct the single TikTok caption (Title + Credits + Tags)
+    tiktok_caption = (
+        f"[Fan Content] {game_name} - Put the phone down and breathe 🌿\n\n"
+        f"Credits: {credits_text}\n\n"
+        f"{hashtag_string}"
+    )
+    
+    # 5. Execute the upload sequence
     public_link = get_public_video_url(video_file)
-    upload_to_zernio(public_link, video_title)
+    upload_to_zernio(public_link, tiktok_caption)
