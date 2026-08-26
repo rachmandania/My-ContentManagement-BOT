@@ -84,7 +84,7 @@ def upload_to_zernio(video_url, title):
     
     response = requests.post(url, headers=headers, json=payload)
     
-    if response.status_code in (200, 201):
+    if response.status_code in (200, 201, 207):
         print("✅ SUCCESS: Video successfully queued in Zernio!")
     else:
         print(f"❌ Failed to send to Zernio. Status: {response.status_code}")
