@@ -4,20 +4,17 @@ import requests
 
 def get_public_video_url(file_path):
     print(f"🌍 Uploading {file_path} to temporary public host...")
-    url = "https://catbox.moe/user/api.php"
-    data = {"reqtype": "fileupload"}
-    
-    # This header bypasses the bot filter by mimicking a real web browser
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    }
+    url = "https://tmpfiles.org/api/v1/upload"
     
     with open(file_path, "rb") as f:
-        files = {"fileToUpload": f}
-        response = requests.post(url, headers=headers, data=data, files=files)
+        files = {"file": f}
+        response = requests.post(url, files=files)
         
     if response.status_code == 200:
-        public_url = response.text.strip()
+        # tmpfiles returns a viewer link. We inject '/dl' to make it a direct download link for Zernio.
+        viewer_url = response.json()['data']['url']
+        public_url = viewer_url.replace("tmpfiles.org/", "tmpfiles.org/dl/")
+        
         print(f"✅ Public URL generated: {public_url}")
         return public_url
     else:
