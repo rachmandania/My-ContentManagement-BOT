@@ -22,6 +22,63 @@ if os.path.exists("video_metadata.json"):
 command = sys.argv[1] if len(sys.argv) > 1 else "start"
 
 if command == "start":
+    requests.post(discord_webhook, json={"content": "⏳ **Workflow Started:** The video factory is booting up and generating today's content..."})
+    print("Start notification sent.")
+
+elif command == "success":
+    success_message = (
+        f"✅ **Video Generation Complete!**\n\n"
+        f"🎮 **Selected Game:** {game_name}\n"
+        f"🎥 Both Horizontal (10m) and Vertical (2m 50s) native clips are rendered.\n"
+        f"🚀 Initiating multi-platform distribution..."
+    )
+    payload = {"content": success_message}
+    requests.post(discord_webhook, json=payload)
+    print("Successfully sent success notification to Discord!")
+
+elif command == "uploaded":
+    upload_msg = (
+        f"🎉 **Distribution Successful!**\n\n"
+        f"📺 **YouTube:** `[Fan Content] {game_name}` is LIVE! (All tags & AI flags applied)\n"
+        f"🎵 **TikTok:** Vertical video is safely queued in your Drafts via Zernio!\n\n"
+        f"Mission accomplished for today. 🌿"
+    )
+    requests.post(discord_webhook, json={"content": upload_msg})
+    print("Upload notification sent.")
+
+elif command == "error":
+    error_msg = "An unknown error occurred during execution."
+    if os.path.exists("error.log"):
+        with open("error.log", "r") as f:
+            # Grabs the last 1800 characters to fit nicely into Discord's message limits
+            error_msg = f.read()[-1800:]
+            
+    payload = {"content": f"🚨 **CRITICAL ERROR: Workflow Crashed!**\n```python\n{error_msg}\n```"}
+    requests.post(discord_webhook, json=payload)
+    print("Error notification sent.")import os
+import sys
+import json
+import requests
+
+discord_webhook = os.environ.get("DISCORD_WEBHOOK_URL")
+
+if not discord_webhook:
+    print("Discord webhook URL not found. Skipping notification.")
+    sys.exit(0)
+
+# Load metadata if available to pull the selected game name dynamically
+game_name = "Game Relaxation"
+if os.path.exists("video_metadata.json"):
+    try:
+        with open("video_metadata.json", "r", encoding="utf-8") as f:
+            meta = json.load(f)
+            game_name = meta.get("game_name", "Game Relaxation")
+    except Exception:
+        pass
+
+command = sys.argv[1] if len(sys.argv) > 1 else "start"
+
+if command == "start":
     requests.post(discord_webhook, json={"content": "⏳ **Workflow Started:** The video factory is running..."})
     print("Start notification sent.")
 
